@@ -123,15 +123,15 @@ static char *Errormsg = NULL;
 
 %token PIPE CR
 %token NOT AND OR LD EQUAL NE GT GE LT LE
-%token ADD SUB MUL DIV MOD INT LET IN END IF THEN ELSE ANY WHERE RAND DEF
-%token INTERFACE IFCE PRNAT FREE QUIT
+%token ADD SUB MUL DIV MOD INT LET IN END IF THEN ELSE ANY WHERE
 %token END_OF_FILE USE
 
 
 %type <ast>
-body
+top
 func_def
 constr_term
+bundle
 expression
 agentterm
 let_term
@@ -171,7 +171,7 @@ s
   if (yyin == stdin) yylineno=0;
   YYACCEPT;
 }
-| body DELIMITER
+| top DELIMITER
 {
   exec($1);
   ast_heapReInit(); 
@@ -186,15 +186,23 @@ s
 
 
 command
-: COLON QUIT {destroy(); exit(0);}
+: COLON NAME
+{
+  if (!(strcmp($2, "quit"))) {
+    destroy(); exit(0);
+  } else if (!(strcmp($2, "q"))) {
+    destroy(); exit(0);    
+
+  } else {
+    printf("ERROR: No operation for the given command.");
+  }
+}
 ;
 
 
 
 
-// body is a list such as [stmlist, aplist] 
-// ==> changed into (AST_BODY stmlist aplist)
-body
+top
 : func_def
 | expr
 ; 
@@ -207,16 +215,18 @@ term_symbol
 
 // (AST_RULE
 //      [foo_sym_agent, const_agent, params1, params2, ...]
-//      <body>
+//      (AST_BUNDLE [expression1, expression2,...] NULL)
 // )
+
+
 func_def
-: term_symbol constr_term LD expression
+: term_symbol constr_term LD bundle
 { $$ = ast_makeAST(AST_RULE,
 		   ast_makeCons(ast_makeSymbol($1),
 				ast_makeCons($2, NULL)),
 		   $4);
 }
-| term_symbol constr_term ast_params LD expression
+| term_symbol constr_term ast_params LD bundle
 { $$ = ast_makeAST(AST_RULE,
 		   ast_makeCons(ast_makeSymbol($1),
 				ast_makeCons($2, $3)),
@@ -233,24 +243,34 @@ constr_term
 { $$=ast_makeAST(AST_AGENT, ast_makeSymbol($2), NULL); }
 | LP AGENT ast_params RP
 { $$=ast_makeAST(AST_AGENT, ast_makeSymbol($2), $3); }
-
+;
 
 
 
 expression
 : ast_params { $$ = ast_makeAST(AST_APP, $1, NULL); }
 | let_term
-  //| LP expression RP { $$ = $2; }
 ;
 
-  
+
+
 //(LET (LD (SYM_LIST x1 x2 x3) TERM) TERM)
 let_term
-: LET bundle_params LD expression IN expression
+: LET bundle_params LD expression IN bundle
 { $$ = ast_makeAST(AST_LET,
 		   ast_makeAST(AST_LD, $2, $4),
 		   $6); }
 ;
+
+
+
+bundle
+: expression 
+{ $$ = ast_makeBundle(ast_makeList1($1)); }
+| bundle COMMA expression 
+{ $$ = ast_makeBundle(ast_makeList2($1, $3)); }
+;
+
 
 
 
@@ -323,7 +343,6 @@ multiplicative_expr
 unary_expr
 : primary_expr
 | SUB primary_expr { $$ = ast_makeAST(AST_UNM, $2, NULL); }
-| RAND LP primary_expr RP { $$ = ast_makeAST(AST_RAND, $3, NULL); }
 ;
 
 primary_expr
@@ -424,20 +443,25 @@ void puts_term_from_ast(Ast *p) {
     
   case AST_AGENT: {
     puts_term_from_ast(p->left);
-    printf("(");
 
-    Ast *ast_list = p->right;
-    while (ast_list != NULL) {
-      Ast *hd = ast_list->left;
-      puts_term_from_ast(hd);
-      ast_list = ast_getTail(ast_list);
-      if (ast_list == NULL) {
-	break;
-      }
-      printf(",");
+    if (p->right != NULL) {
+    
+      printf("(");
       
+      Ast *ast_list = p->right;
+      while (ast_list != NULL) {
+	Ast *hd = ast_list->left;
+	puts_term_from_ast(hd);
+	ast_list = ast_getTail(ast_list);
+	if (ast_list == NULL) {
+	  break;
+	}
+	printf(",");
+	
+      }
+      printf(")");
     }
-    printf(")");
+    
     break;
   }
     
@@ -648,7 +672,8 @@ int compile_expression(Ast *sym_list, Ast *body) {
 int compile_rule(Ast *at) {
   // (AST_RULE
   //      [foo_sym_agent, const_agent, arg1, arg2...]
-  //      <body> <-- ast (not LIST for now)
+  //      //<body> <-- ast (not LIST for now)
+  //      (AST_BUNDLE explist NULL) 
   // )
   
   Ast *body = at->right;
@@ -658,67 +683,10 @@ int compile_rule(Ast *at) {
     return 0;
   }
 
-  switch (body->id) {
-  case AST_APP: {      
-    // (AST_APP (AST_LIST term tl) NULL);
+  
 
-    // T(foo C(...) a b = t)  // where t is just a term, not a bundle
-    // ==> foo(r1,a,b) >< C(...) => r1~t
-
-    
-    //T(foo C(...) a b = f a b)
-    //==> foo(r1,a,b) >< C(...) => f(r,b) ~ a
-    //
-    //T(foo C(...) a b = f a b)
-    //==> foo(r1,r2,a,b) >< C(...) => f(r1,r2,b) ~ a
-    //
-    // we have to memorise the number of returning bundles.
-    // But, anyway we assume that it is just 1.
-    
-    //ast_puts(body); puts("");
-    
-    
-    // Operation for LHS
-    Ast *def_list = at->left;
-    
-    Ast *ast_sym = def_list->left;
-    def_list = ast_getTail(def_list);
-    
-    char *sym = ast_sym->sym;
-    char *r = new_name_r();
-
-    Ast *constr = def_list->left;
-    
-    
-    printf("%s(%s", sym, r);
-
-    Ast *param_list = ast_getTail(def_list);
-    
-    while (param_list != NULL) {
-      printf(",");
-      puts_term_from_ast(param_list->left);
-      param_list = ast_getTail(param_list);
-    }
-    
-    
-    printf(")><");
-    puts_term_from_ast(constr);
-
-
-    printf(" => ");
-
-    Ast *sym_list = ast_makeList1(ast_makeSymbol(r));
-    compile_expression(sym_list, body);
-
-    
-    
-    free_name_r(r);
-
-    break;
-  }
-
-    
-  case AST_LET: {
+  // Let expression
+  if (body->id == AST_LET) {
     // body is LET
     //(LET (LD (SYM_LIST x1 x2 x3) TERM) TERM)
     //
@@ -745,15 +713,138 @@ int compile_rule(Ast *at) {
     printf(", ");
     compile_expression(symlist, rhs);
 
-    
-    
-  }
-  break;
+    // Finish
+    return 1;
 
+  }
+
+
+  
+  int bundle_arity;
+  if (body->id == AST_BUNDLE) {
+    bundle_arity = body->intval;
+    
+  } else {
+    // AST_APP
+
+    // we have to memorise the number of returning bundles.
+    // But, anyway we assume that it is just 1.
+
+    bundle_arity = 1;
+
+  }
+    
+
+  // make the responsible names: r1, r2, r3, ...
+  // according to the number bundle_arity
+  Ast *sym_list = NULL;
+  for (int i=0; i<bundle_arity; i++) {
+    sym_list = ast_addLast(sym_list, ast_makeSymbol(new_name_r()));
+  }
+
+
+  // Operation for LHS
+  Ast *def_list = at->left;
+  
+  Ast *ast_sym = def_list->left;
+  char *sym = ast_sym->sym;
+  printf("%s(", sym);
+  
+  def_list = ast_getTail(def_list);
+  
+  Ast *constr = def_list->left;
+  
+  
+
+  Ast *p = sym_list;
+  while (p != NULL) {
+    printf("%s", p->left->sym);
+    if (p->right == NULL) {
+      break;      
+    }
+    printf(",");
+    p = p->right;
+  }
+
+  
+  Ast *param_list = ast_getTail(def_list);
+  
+  while (param_list != NULL) {
+    printf(",");
+    puts_term_from_ast(param_list->left);
+    param_list = ast_getTail(param_list);
+  }
+  
+  
+  printf(")><");
+  puts_term_from_ast(constr);
+  
+
+  
+  printf(" => ");
+
+  
+  
+  
+  switch (body->id) {
+  case AST_APP: {      
+    // (AST_APP (AST_LIST term tl) NULL);
+
+    // T(foo C(...) a b = t)  // where t is just a term, not a bundle
+    // ==> foo(r1,a,b) >< C(...) => r1~t
+
+    
+    //T(foo C(...) a b = f a b)
+    //==> foo(r1,a,b) >< C(...) => f(r,b) ~ a
+    //
+    //T(foo C(...) a b = f a b)
+    //==> foo(r1,r2,a,b) >< C(...) => f(r1,r2,b) ~ a
+    //
+    // we have to memorise the number of returning bundles.
+    // But, anyway we assume that it is just 1.
+    
+    //ast_puts(body); puts("");
+    
+    
+    //    Ast *sym_list = ast_makeList1(ast_makeSymbol(r));
+    compile_expression(sym_list, body);
+    
+    break;
+  }
+
+    
+  case AST_BUNDLE: {
+    Ast *exps = body->left;
+    Ast *syms = sym_list;
+
+    while (exps != NULL) {
+      compile_expression(ast_makeList1(syms->left), exps->left);
+      exps = exps->right;
+      syms = syms->right;
+      if (exps != NULL) {
+	printf(", ");
+      }
+    }
+    
+    break;
+  }
+
+    
   default:
     puts("???");
   }
 
+
+  // free names
+  p = sym_list;
+  while (p != NULL) {
+    free_name_r(p->left->sym);
+    p = p->right;
+  }
+    
+
+
+  
   return 1;
 }
 
@@ -777,6 +868,8 @@ int compile(Ast *ast) {
 
   return 1;
 }
+
+
 
 int exec(Ast *at) {
 

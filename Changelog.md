@@ -1,15 +1,32 @@
 # Change log
-### v0.0.1 (released on 11 Oct 2023)
+
+### v0.0.2 (released on 12 Oct 2023)
 
 #### Polished
-- **The suffix of fresh names**: The suffix is defined in `src/config.h`, so change it to suit your needs:
+
+- **Bundles**: are specified as return values. For example, we can define `dup` for `Z` and `S` as follows:
 
   ```
-  // The suffix of fresh names
-  #define SUFFIX_FRESH_NAMES "rr_"
+  >>> dup Z = Z,Z;
+  dup(rr_0,rr_1)><Z => rr_0~Z, rr_1~Z;
+  >>> dup (S x) = let w1,w2 = dup x in (S w1), (S w2);
+  dup(rr_0,rr_1)><S(x) => rr_0~S(w1), rr_1~S(w2), dup(w1,w2)~x;
   ```
 
   
+
+- ### v0.0.1 (released on 11 Oct 2023)
+
+  #### Polished
+  
+  - **The suffix of fresh names**: The suffix is defined in `src/config.h`, so change it to suit your needs:
+  
+    ```
+    // The suffix of fresh names
+    #define SUFFIX_FRESH_NAMES "rr_"
+    ```
+  
+    
 
 
 ### v0.0.0 (released on 10 Oct 2023)

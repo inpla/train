@@ -122,16 +122,6 @@ char *Parse_closeStringBuffer() {
 <INITIAL>"then" return(THEN);
 <INITIAL>"else" return(ELSE);
 
-<INITIAL>"interface" return(INTERFACE);
-<INITIAL>"ifce" return(IFCE);
-
-<INITIAL>"prnat" return(PRNAT);
-<INITIAL>"free" return(FREE);
-<INITIAL>"quit" return(QUIT);
-
-<INITIAL>"rand" return(RAND);
-
-<INITIAL>"const" return(DEF);
 
 <INITIAL>"use" return(USE);
 
