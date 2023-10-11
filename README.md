@@ -36,11 +36,18 @@ Translator of the new language of interaction nets.
   inc(_r0)><Z() => _r0~S(Z());
   >>> inc Z = (S Z);
   inc(_r0)><Z() => _r0~S(Z());
-  >>> foo Z y = add y Z;
-  foo(_r0,y)><Z() => add(_r0,Z())~y;
-  >>> foo Z y = let x1,x2 = boo Z in AAA x1 x2 y;
-  foo(_r0,y)><Z() => _r0~AAA(x1,x2,y), boo(x1,x2)~Z();
+  >>> inc (S x) = let w = inc x in (S w);
+  inc(_r0)><S(x) => _r0~S(w), inc(w)~x;
   >>> 		
+  ```
+  ```
+  >>> add Z x = x;
+  add(_r0,x)><Z() => _r0~x;
+  >>> add (S y) x = let w=add y x in (S w);
+  add(_r0,x)><S(y) => _r0~S(w), add(w,x)~y;
+  >>> add (S y) x = add y (S x);
+  add(_r0,x)><S(y) => add(_r0,S(x))~y;
+  >>>
   ```
 
 * To quit this system, use `:quit` command:
