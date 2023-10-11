@@ -38,8 +38,14 @@ Translator of the new language of interaction nets.
   inc(_r0)><Z() => _r0~S(Z());
   >>> inc (S x) = let w = inc x in (S w);
   inc(_r0)><S(x) => _r0~S(w), inc(w)~x;
-  >>> 		
+  >>> inc (S x) =
+  ...   let w = (inc x) in
+  ...   (S w);
+  inc(_r0)><S(x) => _r0~S(w), inc(w)~x;
+  >>>
   ```
+  
+
   ```
   >>> add Z x = x;
   add(_r0,x)><Z() => _r0~x;
