@@ -17,7 +17,7 @@
   //#include "mytype.h"
   //#include "inpla.h"
 
-  //#include "config.h"  
+#include "config.h"  
 
 
 
@@ -394,7 +394,7 @@ void init_r() {
 char* new_name_r() {
   char buf[RNUM_STR_LENGTH];
   char *ret;
-  snprintf(buf, RNUM_STR_LENGTH, "_r%d", rnum);
+  snprintf(buf, RNUM_STR_LENGTH, "%s%d", SUFFIX_FRESH_NAMES, rnum);
   rnum++;
 
   ret = strndup(buf, RNUM_STR_LENGTH);

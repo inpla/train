@@ -33,26 +33,26 @@ Translator of the new language of interaction nets.
 
   ```
   >>> inc Z = S Z;
-  inc(_r0)><Z() => _r0~S(Z());
+  inc(rr_0)><Z() => rr_0~S(Z());
   >>> inc Z = (S Z);
-  inc(_r0)><Z() => _r0~S(Z());
+  inc(rr_0)><Z() => rr_0~S(Z());
   >>> inc (S x) = let w = inc x in (S w);
-  inc(_r0)><S(x) => _r0~S(w), inc(w)~x;
+  inc(rr_0)><S(x) => rr_0~S(w), inc(w)~x;
   >>> inc (S x) =
   ...   let w = (inc x) in
   ...   (S w);
-  inc(_r0)><S(x) => _r0~S(w), inc(w)~x;
+  inc(rr_0)><S(x) => rr_0~S(w), inc(w)~x;
   >>>
   ```
   
 
   ```
   >>> add Z x = x;
-  add(_r0,x)><Z() => _r0~x;
+  add(rr_0,x)><Z() => rr_0~x;
   >>> add (S y) x = let w=add y x in (S w);
-  add(_r0,x)><S(y) => _r0~S(w), add(w,x)~y;
+  add(rr_0,x)><S(y) => rr_0~S(w), add(w,x)~y;
   >>> add (S y) x = add y (S x);
-  add(_r0,x)><S(y) => add(_r0,S(x))~y;
+  add(rr_0,x)><S(y) => add(rr_0,S(x))~y;
   >>>
   ```
 
@@ -69,7 +69,7 @@ Translator of the new language of interaction nets.
 The current version has some limitations:
 
 - Nested terms are not supported. This will be solved in the next version.
-- Any attributes are not supported.
+- Attributes are not supported.
 - Expressions are not supported, just for rules for now. This will be solved in the later version.
 
 
