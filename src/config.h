@@ -1,4 +1,4 @@
-// suffixes of the fresh names
+// The suffix of fresh names
 #define SUFFIX_FRESH_NAMES "rr_"
 
 
