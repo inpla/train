@@ -186,8 +186,9 @@ Ast *ast_makeAST(AST_ID id, Ast *left, Ast *right) {
 
 int ast_getLen(Ast *p) {
   int count=0;
-  while (p!=NULL) {
-    p = ast_getTail(p);
+  Ast *list = p;
+  while (list!=NULL) {
+    list = ast_getTail(list);
     count++;
   }
   return count;
@@ -201,7 +202,7 @@ Ast *ast_makeBundle(Ast *list) {
   }
 
   if (len == 1) {
-    // (AST_LIST expression NULL)
+    // (AST_LIST expression NULL)]
     return list->left;    
   }
 
@@ -240,7 +241,10 @@ Ast *ast_addLast(Ast *l, Ast *p)
 {
     Ast *q;
 
+    // (NULL, p) => [p]
     if(l == NULL) return ast_makeAST(AST_LIST,p,NULL);
+
+    // ([...], p) = [..., p]
     q = l;
     while(q->right != NULL) q = q->right;
     q->right = ast_makeAST(AST_LIST,p,NULL);
@@ -308,14 +312,8 @@ void ast_puts(Ast *p) {
     ast_puts(p->right);
     printf(")");
     break;
-  case AST_NIL:
-    printf("NIL");
-    break;
-  case AST_ANNOTATION_L:
-  case AST_ANNOTATION_R:
-    printf("%s", string_AstID[p->id]);
-    ast_puts(p->left);
-    break;
+    
+    
   default:
     printf("%s(", string_AstID[p->id]);
     ast_puts(p->left);
@@ -330,38 +328,3 @@ void ast_puts(Ast *p) {
 
 
 
-
-Ast *ast_remove_tuple1(Ast *p) {
-
-  if (p==NULL) return p;
-
-  switch(p->id) {
-  case AST_INT:
-    return p;
-    break;
-  case AST_SYM:
-    return p;
-    break;
-  case AST_TUPLE:
-    if (p->intval == 1) {
-      // (AST_TUPLE NULL (LIST left right))
-      p = p->right->left;
-    }
-    p->right = ast_remove_tuple1(p->right);
-    return p;
-    break;
-  case AST_NIL:
-    return p;
-    break;
-  case AST_ANNOTATION_L:
-  case AST_ANNOTATION_R:
-    p->left = ast_remove_tuple1(p->left);
-    return p;
-    break;
-  default:
-    p->left = ast_remove_tuple1(p->left);
-    p->right = ast_remove_tuple1(p->right);
-    return p;
-
-  }
-}

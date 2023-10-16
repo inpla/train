@@ -1,0 +1,18 @@
+inc Z = S Z;
+inc Z = (S Z);
+inc (S x) = let w = inc x in (S w);
+inc (S x) =
+   let w = (inc x) in
+   (S w);
+
+add Z x = x;
+add (S y) x = S (add y x);  // accept, but something strange.
+add (S y) x = let w=add y x in (S w); // it should be written
+add (S y) x = add y (S x);  // accept.
+add (S y) x = let w=S x in add y w;  // accept, of course.
+
+dup Z = Z,Z;
+dup (S x) = let w1,w2 = dup x in (S w1), (S w2);
+
+
+

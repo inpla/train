@@ -54,13 +54,12 @@ int ast_getLen(Ast *p);
 void ast_puts(Ast *p);
 Ast *ast_paramToCons(Ast *ast);
 int ast_recordConst(char *name, int val);
-Ast *ast_remove_tuple1(Ast *p);
 int ast_getRecordedVal(int entry);
 
-#define ast_makeCons(x1,x2) ast_makeAST(AST_LIST,x1,x2)
-#define ast_makeList1(x1) ast_makeAST(AST_LIST,x1,NULL)
-#define ast_makeList2(x1,x2) ast_makeAST(AST_LIST,x1,ast_makeAST(AST_LIST,x2,NULL))
-#define ast_makeList3(x1,x2,x3) ast_makeAST(AST_LIST,x1,ast_makeAST(AST_LIST,x2,ast_makeAST(AST_LIST,x3,NULL)))
+#define ast_makeCons(x1,x2) ast_makeAST(AST_LIST,(x1),(x2))
+#define ast_makeList1(x1) ast_makeAST(AST_LIST,(x1),NULL)
+#define ast_makeList2(x1,x2) ast_makeAST(AST_LIST,(x1),ast_makeAST(AST_LIST,(x2),NULL))
+#define ast_makeList3(x1,x2,x3) ast_makeAST(AST_LIST,(x1),ast_makeAST(AST_LIST,(x2),ast_makeAST(AST_LIST,(x3),NULL)))
 #define getFirst(p) getNth(p,0)
 
 

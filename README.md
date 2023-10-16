@@ -2,7 +2,7 @@
 
 Translator of the new language of interaction nets. 
 
-- The current version is 0.0.2, released on **12 Oct 2023**. (See [Changelog.md](https://github.com/sintan310/train/blob/main/Changelog.md) for details.)
+- The current version is 0.0.3, released on **15 Oct 2023**. (See [Changelog.md](https://github.com/sintan310/train/blob/main/Changelog.md) for details.)
 
 
 
@@ -57,11 +57,16 @@ Translator of the new language of interaction nets.
   add(rr_0,x)><S(y) => add(rr_0,S(x))~y;
   >>>
   ```
-
-* To quit this system, use `:quit` command:
+  ```
+  >>> dup Z = Z,Z;
+  dup(rr_0,rr_1)><Z => rr_0~Z, rr_1~Z;
+  >>> dup (S x) = let w1,w2 = dup x in (S w1), (S w2);
+  dup(rr_0,rr_1)><S(x) => rr_0~S(w1), rr_1~S(w2), dup(w1,w2)~x;
+  ```
+* To quit this system, use `:q` or  `:quit` command:
 
   ```
-  >>> :quit
+  >>> :q
   ```
 
 

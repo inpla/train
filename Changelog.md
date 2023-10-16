@@ -1,4 +1,11 @@
 # Change log
+### v0.0.3 (released on 15 Oct 2023)
+
+#### Polished
+
+- **Syntax Definition**: It has been neatly modified to support further extensions.
+
+
 
 ### v0.0.2 (released on 12 Oct 2023)
 
@@ -13,20 +20,20 @@
   dup(rr_0,rr_1)><S(x) => rr_0~S(w1), rr_1~S(w2), dup(w1,w2)~x;
   ```
 
-  
 
-- ### v0.0.1 (released on 11 Oct 2023)
 
-  #### Polished
+
+### v0.0.1 (released on 11 Oct 2023)
+
+#### Polished
+- **The suffix of fresh names**: The suffix is defined in `src/config.h`, so change it to suit your needs:
+
+  ```
+  // The suffix of fresh names
+  #define SUFFIX_FRESH_NAMES "rr_"
+  ```
+
   
-  - **The suffix of fresh names**: The suffix is defined in `src/config.h`, so change it to suit your needs:
-  
-    ```
-    // The suffix of fresh names
-    #define SUFFIX_FRESH_NAMES "rr_"
-    ```
-  
-    
 
 
 ### v0.0.0 (released on 10 Oct 2023)
