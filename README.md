@@ -92,6 +92,28 @@ Translator of the new language of interaction nets.
 
 
 
+### Sample
+
+- Fibonacci number
+
+  ```
+  fib Z = Z;
+  fib (S x) = fibS x;
+  fibS Z = (S Z);
+  fibS (S x) = 
+    let w1=(fibS x1) in 
+    let w2=(fibS x2) in 
+    add w1 w2 
+    { Dup(x1,x2)~x };
+  
+  add Z x = x;
+  add (S y) x = let w=(add x y) in S w;
+  ```
+
+  
+
+
+
 ## Limitation
 
 The current version has some limitations:
