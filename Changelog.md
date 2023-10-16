@@ -1,4 +1,13 @@
 # Change log
+### v0.0.4 (released on 16 Oct 2023)
+
+#### Polished
+
+- **Introduce of attributes**: Attributes have been introduced now. Expressions on attributes are also supported.
+
+
+
+
 ### v0.0.3 (released on 15 Oct 2023)
 
 #### Polished

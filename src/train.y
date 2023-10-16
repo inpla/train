@@ -115,7 +115,7 @@ static char *Errormsg = NULL;
 %token <longval> INT_LITERAL
 %token <chval> STRING_LITERAL
 %token LP RP LC RC LB RB COMMA CROSS ABR
-%token COLON
+%token COLON DOT
 %token TO CNCT
 %token DELIMITER 
 
@@ -131,18 +131,29 @@ static char *Errormsg = NULL;
 top
 func_def
 constr_term
+
+declaration_attr
+attribute
+attribute_list
+
+
 expression
 expression_let
 expression_bundle
 expression_atom
 expression_agentterm
+
 agentterm
- //agentterm_atom
 agentterms
 
 names
 name_params
 nameterm
+
+attr_expr
+attr_expr_body
+attr_expr_list
+
 expr additive_expr equational_expr logical_expr relational_expr unary_expr
 multiplicative_expr primary_expr
 
@@ -236,29 +247,80 @@ term_symbol
 
 
 func_def
-: term_symbol constr_term LD expression
+: term_symbol constr_term
+LD expression
 { $$ = ast_makeAST(AST_RULE,
 		   ast_makeCons(ast_makeSymbol($1),
 				ast_makeCons($2, NULL)),
 		   $4);
 }
-| term_symbol constr_term names LD expression
+//
+| term_symbol constr_term names
+LD expression
 { $$ = ast_makeAST(AST_RULE,
 		   ast_makeCons(ast_makeSymbol($1),
 				ast_makeCons($2, $3)),
 		   $5);
 
 }
+//
+| term_symbol declaration_attr constr_term
+LD expression
+{ $$ = ast_makeAST(AST_RULE,
+		   ast_makeCons(ast_makeSymbol($1),
+				ast_makeCons($3, $2)),
+		   $5);
+}
+//
+| term_symbol declaration_attr constr_term names
+LD expression
+{ $$ = ast_makeAST(AST_RULE,
+		   ast_makeCons(ast_makeSymbol($1),
+				ast_makeCons($3,
+					     ast_addLast($2,$4))),
+		   $6);
+}
+////
+;
+
+declaration_attr
+: DOT attribute { $$ = ast_makeList1($2); }
+| DOT LP attribute RP { $$ = ast_makeList1($3); }
+| DOT LP attribute COMMA attribute_list RP
+{ $$ = ast_makeCons($3, $5); }
+;
+
+
+attribute
+: NAME { $$ = ast_makeAST(AST_INTVAR, ast_makeSymbol($1), NULL); }
+;
+
+attribute_list
+: attribute { $$ = ast_makeList1($1); }
+| attribute_list COMMA attribute { $$ = ast_addLast($1, $3); }
 ;
 
 
 constr_term
 : AGENT 
 { $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), NULL); }
+//
+| AGENT declaration_attr
+{ $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), $2); }
+//
+//
 | LP AGENT RP
 { $$=ast_makeAST(AST_AGENT, ast_makeSymbol($2), NULL); }
-| LP AGENT agentterm RP
+//
+| LP AGENT declaration_attr RP
 { $$=ast_makeAST(AST_AGENT, ast_makeSymbol($2), $3); }
+//
+//
+| LP AGENT agentterms RP
+{ $$=ast_makeAST(AST_AGENT, ast_makeSymbol($2), $3); }
+//
+| LP AGENT declaration_attr agentterms RP
+{ $$=ast_makeAST(AST_AGENT, ast_makeSymbol($2), ast_addLast($3,$4)); }
 ;
 
 
@@ -325,30 +387,51 @@ agentterm
 { $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), NULL); }
 | NAME agentterms
 { $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), $2); }
+//
+// with attr_expr
+| AGENT attr_expr
+{ $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), $2); }
+| AGENT attr_expr agentterms
+{ $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), ast_addLast($2,$3)); }
+| NAME  attr_expr
+{ $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), $2); }
+| NAME attr_expr agentterms
+{ $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), ast_addLast($2,$3)); }
 ;
 
 
 
 agentterms
 : AGENT
-{
-  $$ = ast_makeList1(ast_makeAST(AST_AGENT, ast_makeSymbol($1), NULL));
-}
+{ $$ = ast_makeList1(ast_makeAST(AST_AGENT, ast_makeSymbol($1), NULL)); }
 | NAME
-{
-  $$ = ast_makeList1(ast_makeAST(AST_NAME, ast_makeSymbol($1), NULL));
-}
+{ $$ = ast_makeList1(ast_makeAST(AST_NAME, ast_makeSymbol($1), NULL)); }
 
 | agentterms AGENT
-{
-  $$ = ast_addLast($1,
+{ $$ = ast_addLast($1,
 		   ast_makeAST(AST_AGENT, ast_makeSymbol($2), NULL));
 }
 | agentterms NAME
-{
-  $$ = ast_addLast($1,
+{ $$ = ast_addLast($1,
 		   ast_makeAST(AST_NAME, ast_makeSymbol($2), NULL));
 }
+//
+// with attributes
+| AGENT attr_expr
+{ $$ = ast_makeList1(ast_makeAST(AST_AGENT, ast_makeSymbol($1), $2)); }
+| NAME attr_expr
+{ $$ = ast_makeList1(ast_makeAST(AST_NAME, ast_makeSymbol($1), $2)); }
+
+| agentterms AGENT attr_expr
+{ $$ = ast_addLast($1,
+		   ast_makeAST(AST_AGENT, ast_makeSymbol($2), $3));
+}
+| agentterms NAME attr_expr
+{ $$ = ast_addLast($1,
+		   ast_makeAST(AST_NAME, ast_makeSymbol($2), $3));
+}
+//
+//
 | LP agentterms RP { $$ = ast_makeList1($2); }
 | agentterms LP agentterm RP { $$ = ast_addLast($1,$3); }
 ;
@@ -357,7 +440,8 @@ agentterms
 
 names
 : NAME { $$=ast_makeList1(ast_makeSymbol($1)); }
-| name_params NAME
+//| name_params NAME
+| names NAME
 { $$= ast_addLast($1, ast_makeSymbol($2));
 }
 ;
@@ -373,6 +457,20 @@ name_params
 
 
 
+
+attr_expr
+: DOT attr_expr_body { $$ = $2; }
+;
+
+attr_expr_body
+: expr { $$ = ast_makeList1($1); }
+| LP expr COMMA attr_expr_list RP { $$ = ast_makeCons($2,$4); }
+;
+
+attr_expr_list
+: expr { $$ = ast_makeList1($1); }
+| attr_expr_list COMMA expr { $$ = ast_addLast($1, $3); }
+;
 
 
 expr
@@ -420,7 +518,7 @@ unary_expr
 primary_expr
 : nameterm { $$ = $1;}
 | INT_LITERAL { $$ = ast_makeInt($1); }
-| AGENT { $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), NULL); }
+//| AGENT { $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), NULL); }
 | LP expr RP { $$ = $2; }
 ;
 
@@ -499,7 +597,145 @@ void free_name_r(char *r) {
 }
 
 
+void puts_expr_from_ast_equational(Ast *p);
+void puts_expr_from_ast_logical(Ast *p);
+void puts_expr_from_ast_relational(Ast *p);
+void puts_expr_from_ast_additive(Ast *p);
+void puts_expr_from_ast_multiplicative(Ast *p);
+void puts_expr_from_ast_unary(Ast *p);
+void puts_expr_from_ast_atom(Ast *p);
 
+
+void puts_expr_from_ast(Ast *p) {
+  puts_expr_from_ast_equational(p);
+  
+}
+
+
+void puts_expr_from_ast_equational(Ast *p) {
+  if (p->id == AST_EQ) {
+    puts_expr_from_ast_equational(p->left);
+    printf("==");
+    puts_expr_from_ast_logical(p->right);
+    
+  } else if (p->id == AST_NE) {
+    puts_expr_from_ast_equational(p->left);
+    printf("!=");
+    puts_expr_from_ast_logical(p->right);
+    
+  } else {
+    puts_expr_from_ast_logical(p);
+  }    
+  
+}
+
+
+
+void puts_expr_from_ast_logical(Ast *p) {
+  if (p->id == AST_NOT) {
+    puts_expr_from_ast_relational(p->left);
+    printf("!");
+    
+  } else if (p->id == AST_AND) {
+    puts_expr_from_ast_logical(p->left);
+    printf("&&");
+    puts_expr_from_ast_relational(p->right);
+    
+  } else if (p->id == AST_OR) {
+    puts_expr_from_ast_logical(p->left);
+    printf("!!");
+    puts_expr_from_ast_relational(p->right);
+        
+  } else {
+    puts_expr_from_ast_relational(p);
+  }    
+}
+
+
+void puts_expr_from_ast_relational(Ast *p) {
+  if (p->id == AST_LT) {
+    puts_expr_from_ast_relational(p->left);
+    printf("<");
+    puts_expr_from_ast_additive(p->right);
+
+  } else if (p->id == AST_LE) {
+    puts_expr_from_ast_relational(p->left);
+    printf("<=");
+    puts_expr_from_ast_additive(p->right);
+
+  } else {
+    puts_expr_from_ast_additive(p);
+  }
+}
+
+
+void puts_expr_from_ast_additive(Ast *p) {
+  if (p->id == AST_PLUS) {
+    puts_expr_from_ast_additive(p->left);
+    printf("+");
+    puts_expr_from_ast_multiplicative(p->right);
+
+  } else if (p->id == AST_SUB) {
+    puts_expr_from_ast_additive(p->left);
+    printf("-");
+    puts_expr_from_ast_multiplicative(p->right);
+
+  } else {
+    puts_expr_from_ast_multiplicative(p);
+  }
+}
+
+
+void puts_expr_from_ast_multiplicative(Ast *p) {
+  if (p->id == AST_MUL) {
+    puts_expr_from_ast_multiplicative(p->left);
+    printf("+");
+    puts_expr_from_ast_unary(p->right);
+
+  } else if (p->id == AST_DIV) {
+    puts_expr_from_ast_multiplicative(p->left);
+    printf("/");
+    puts_expr_from_ast_unary(p->right);
+    
+  } else if (p->id == AST_MOD) {
+    puts_expr_from_ast_multiplicative(p->left);
+    printf("%%");
+    puts_expr_from_ast_unary(p->right);
+    
+  } else {
+    puts_expr_from_ast_unary(p);    
+  }
+}
+  
+
+void puts_expr_from_ast_unary(Ast *p) {
+  if (p->id == AST_UNM) {
+    printf("-");
+    puts_expr_from_ast_atom(p->left);
+    
+  } else {
+    puts_expr_from_ast_atom(p);    
+  }
+}
+
+
+
+void puts_expr_from_ast_atom(Ast *p) {
+  if (p->id == AST_NAME) {
+    printf("%s", p->left->sym);
+    
+  } else if (p->id == AST_INT) {
+    printf("%ld", p->longval);
+    
+  } else {
+    printf("(");
+    puts_expr_from_ast(p);
+    printf(")");
+  }	   
+}
+
+
+ 
 void puts_term_from_ast(Ast *p) {
   switch (p->id) {
     
@@ -512,6 +748,7 @@ void puts_term_from_ast(Ast *p) {
     puts_term_from_ast(p->left);
     break;
 
+    
   case AST_APP:
     puts("APP-APP");
     break;
@@ -534,7 +771,7 @@ void puts_term_from_ast(Ast *p) {
 	  break;
 	}
 	ast_list = ast_list->right;
-	printf(",");
+	printf(", ");
 	
       }
       printf(")");
@@ -555,7 +792,7 @@ void puts_term_from_ast(Ast *p) {
       if (ast_list == NULL) {
 	break;
       }
-      printf(",");
+      printf(", ");
       
     }
 
@@ -580,13 +817,32 @@ void puts_term_from_ast(Ast *p) {
       if (param_list == NULL) {
 	break;
       }
-      printf(",");
+      printf(", ");
     }
 
     
     break;
   }
 
+  case AST_INTVAR: {
+    printf("int %s", p->left->sym);
+    break;
+  }
+
+
+  case AST_INT:
+  case AST_PLUS: 
+  case AST_SUB:
+  case AST_MUL:
+  case AST_DIV:
+  case AST_MOD:
+  case AST_LT:
+  case AST_LE:
+  case AST_EQ:
+  case AST_NE: {
+    puts_expr_from_ast(p);
+    break;
+  }
 
     
   default:
@@ -787,7 +1043,7 @@ int compile_rule(Ast *at) {
     if (p->right == NULL) {
       break;      
     }
-    printf(",");
+    printf(", ");
     p = p->right;
   }
 
@@ -796,19 +1052,19 @@ int compile_rule(Ast *at) {
 
   
   while (param_list != NULL) {
-    printf(",");
+    printf(", ");
     puts_term_from_ast(param_list->left);
     param_list = ast_getTail(param_list);
   }
   
   
-  printf(")><");
+  printf(") >< ");
 
   
   puts_term_from_ast(constr);
   
   
-  printf(" => ");
+  printf(" =>\n    ");
 
   
   

@@ -2,7 +2,7 @@
 
 Translator of the new language of interaction nets. 
 
-- The current version is 0.0.3, released on **15 Oct 2023**. (See [Changelog.md](https://github.com/sintan310/train/blob/main/Changelog.md) for details.)
+- The current version is 0.0.4, released on **16 Oct 2023**. (See [Changelog.md](https://github.com/sintan310/train/blob/main/Changelog.md) for details.)
 
 
 
@@ -35,34 +35,48 @@ Translator of the new language of interaction nets.
 
   ```
   >>> inc Z = S Z;
-  inc(rr_0)><Z() => rr_0~S(Z());
+  inc(rr_0) >< Z =>
+      rr_0~S(Z);
   >>> inc Z = (S Z);
-  inc(rr_0)><Z() => rr_0~S(Z());
+  inc(rr_0) >< Z =>
+      rr_0~S(Z);
   >>> inc (S x) = let w = inc x in (S w);
-  inc(rr_0)><S(x) => rr_0~S(w), inc(w)~x;
-  >>> inc (S x) =
-  ...   let w = (inc x) in
-  ...   (S w);
-  inc(rr_0)><S(x) => rr_0~S(w), inc(w)~x;
+  inc(rr_0) >< S(x) =>
+      rr_0~S(w), inc(w)~x;
   >>>
   ```
   
-
+  
   ```
   >>> add Z x = x;
-  add(rr_0,x)><Z() => rr_0~x;
+  add(rr_0, x) >< Z =>
+      rr_0~x;
   >>> add (S y) x = let w=add y x in (S w);
-  add(rr_0,x)><S(y) => rr_0~S(w), add(w,x)~y;
+  add(rr_0, x) >< S(y) =>
+      rr_0~S(w), add(w, x)~y;
   >>> add (S y) x = add y (S x);
-  add(rr_0,x)><S(y) => add(rr_0,S(x))~y;
+  add(rr_0, x) >< S(y) =>
+      add(rr_0, S(x))~y;
   >>>
   ```
   ```
   >>> dup Z = Z,Z;
-  dup(rr_0,rr_1)><Z => rr_0~Z, rr_1~Z;
+  dup(rr_0, rr_1) >< Z =>
+      rr_0~Z, rr_1~Z;
   >>> dup (S x) = let w1,w2 = dup x in (S w1), (S w2);
-  dup(rr_0,rr_1)><S(x) => rr_0~S(w1), rr_1~S(w2), dup(w1,w2)~x;
+  dup(rr_0, rr_1) >< S(x) =>
+      rr_0~S(w1), rr_1~S(w2), dup(w1, w2)~x;
+  >>>
   ```
+  ```
+  >>> inc Int.x = Int.(x+1);
+  inc(rr_0) >< Int(int x) =>
+      rr_0~Int(x+1);
+  >>> add.x Int.y = Int.x+y;
+  add(rr_0, int x) >< Int(int y) =>
+      rr_0~Int(x+y);
+  ```
+  
 * To quit this system, use `:q` or  `:quit` command:
 
   ```
@@ -76,8 +90,8 @@ Translator of the new language of interaction nets.
 The current version has some limitations:
 
 - Nested terms are not supported. This will be solved in the next version.
-- Attributes are not supported.
 - Expressions are not supported, just for rules for now. This will be solved in the later version.
+- Built-in constants such as Cons, Nil are not supported.
 
 
 
