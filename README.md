@@ -2,7 +2,7 @@
 
 Translator of the new language of interaction nets. 
 
-- The current version is 0.0.4, released on **16 Oct 2023**. (See [Changelog.md](https://github.com/sintan310/train/blob/main/Changelog.md) for details.)
+- The current version is 0.0.5, released on **16 Oct 2023**. (See [Changelog.md](https://github.com/sintan310/train/blob/main/Changelog.md) for details.)
 
 
 
@@ -66,6 +66,13 @@ Translator of the new language of interaction nets.
   >>> dup (S x) = let w1,w2 = dup x in (S w1), (S w2);
   dup(rr_0, rr_1) >< S(x) =>
       rr_0~S(w1), rr_1~S(w2), dup(w1, w2)~x;
+  >>>
+  ```
+  ```
+  >>> dup Z = a,b { Dup(a,b)~Z };
+  dup(rr_0, rr_1) >< Z =>
+      rr_0~a, rr_1~b,
+       Dup(a,b)~Z ;
   >>>
   ```
   ```

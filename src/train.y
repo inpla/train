@@ -21,8 +21,8 @@
 
 
 
-#define VERSION "0.0.3"
-#define BUILT_DATE  "15 Oct 2023"
+#define VERSION "0.0.5"
+#define BUILT_DATE  "16 Oct 2023"
   
 
  
@@ -114,7 +114,7 @@ static char *Errormsg = NULL;
 %token <chval> NAME AGENT ALPHA_NUMERAL
 %token <longval> INT_LITERAL
 %token <chval> STRING_LITERAL
-%token LP RP LC RC LB RB COMMA CROSS ABR
+%token LP RP LB RB COMMA CROSS ABR
 %token COLON DOT
 %token TO CNCT
 %token DELIMITER 
@@ -165,11 +165,6 @@ multiplicative_expr primary_expr
 %nonassoc RP
 
 %right COLON
- //%right LD
- //%right EQ
- //%left NE GE GT LT
- //%left ADD SUB
- //%left MULT DIV
 
 %%
 s     
@@ -190,10 +185,28 @@ s
 | top DELIMITER
 {
   exec($1);
+
+  puts(";");
+  fflush(stdout);
+  
   ast_heapReInit(); 
   if (yyin == stdin) yylineno=0;
   YYACCEPT;
 }
+
+| top STRING_LITERAL DELIMITER
+{
+  exec($1);
+  printf(",\n    %s", $2);
+  puts(";");
+  fflush(stdout);
+  
+  ast_heapReInit(); 
+  if (yyin == stdin) yylineno=0;
+  YYACCEPT;
+}
+
+
 | command {
   if (yyin == stdin) yylineno=0;
   YYACCEPT;
@@ -1176,9 +1189,6 @@ int exec(Ast *at) {
 
   compile(at);
     
-  // The delimiter for the ends.
-  puts(";");
-  fflush(stdout);
   
   
   

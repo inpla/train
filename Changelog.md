@@ -1,7 +1,25 @@
 # Change log
+### v0.0.5 (released on 16 Oct 2023)
+
+#### New Features
+
+- **Non-functional part**: The non-functional part is supported. Use braces `{` `}` for that:
+
+  ```
+  >>> dup Z = a,b { Dup(a,b)~Z };
+  dup(rr_0, rr_1) >< Z =>
+      rr_0~a, rr_1~b,
+       Dup(a,b)~Z ;
+  >>>
+  ```
+
+  
+
+
+
 ### v0.0.4 (released on 16 Oct 2023)
 
-#### Polished
+#### New Features
 
 - **Introduce of attributes**: Attributes have been introduced now. Expressions on attributes are also supported.
 
@@ -18,7 +36,7 @@
 
 ### v0.0.2 (released on 12 Oct 2023)
 
-#### Polished
+#### New Features
 
 - **Bundles**: are specified as return values. For example, we can define `dup` for `Z` and `S` as follows:
 

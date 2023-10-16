@@ -81,8 +81,6 @@ char *Parse_closeStringBuffer() {
 <INITIAL>"." return (DOT);
 <INITIAL>"(" return (LP);
 <INITIAL>")" return (RP);
-<INITIAL>"{" return LC;
-<INITIAL>"}" return RC;
 <INITIAL>"[" return LB;
 <INITIAL>"]" return RB;
 <INITIAL>"," return (COMMA);
@@ -148,7 +146,7 @@ char *Parse_closeStringBuffer() {
 <INITIAL><<EOF>> {return END_OF_FILE;}
 
 
-<INITIAL>\" {
+<INITIAL>"\{" {
     Parse_StringBuffer_reInit();
     BEGIN STRING_STATE;
 }
@@ -158,7 +156,7 @@ char *Parse_closeStringBuffer() {
 
 
 
-<STRING_STATE>\"        {
+<STRING_STATE>"}"        {
     yylval.chval = strdup(Parse_closeStringBuffer());
     BEGIN INITIAL;
     return STRING_LITERAL;
