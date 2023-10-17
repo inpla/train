@@ -79,8 +79,11 @@ Translator of the new language of interaction nets.
   >>> inc Int.x = Int.(x+1);
   inc(rr_0) >< Int(int x) =>
       rr_0~Int(x+1);
-  >>> add.x Int.y = Int.x+y;
-  add(rr_0, int x) >< Int(int y) =>
+  >>> add Int.x y = add2.x y;
+  add(rr_0, y) >< Int(int x) =>
+      add2(rr_0, x)~y;
+  >>> add2.x Int.y = Int.(x+y);
+  add2(rr_0, int x) >< Int(int y) =>
       rr_0~Int(x+y);
   ```
   
