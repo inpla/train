@@ -1,5 +1,5 @@
 # Change log
-### v0.0.5-1 (released on 16 Oct 2023)
+### v0.0.5-1 (released on 17 Oct 2023)
 
 #### Bugfixes
 
