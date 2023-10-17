@@ -2,7 +2,7 @@
 
 Translator of the new language of interaction nets. 
 
-- The current version is 0.0.5, released on **16 Oct 2023**. (See [Changelog.md](https://github.com/sintan310/train/blob/main/Changelog.md) for details.)
+- The current version is 0.0.5-1, released on **16 Oct 2023**. (See [Changelog.md](https://github.com/sintan310/train/blob/main/Changelog.md) for details.)
 
 
 

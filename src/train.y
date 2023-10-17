@@ -21,7 +21,7 @@
 
 
 
-#define VERSION "0.0.5"
+#define VERSION "0.0.5-1"
 #define BUILT_DATE  "16 Oct 2023"
   
 
@@ -409,7 +409,18 @@ agentterm
 | NAME  attr_expr
 { $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), $2); }
 | NAME attr_expr agentterms
-{ $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), ast_addLast($2,$3)); }
+{
+  // NAME attr [t1,t2,...]  ==> NAME [t1, attr, t2, ...]
+  { Ast *t1, *t2, *newlist;
+    t1 = $3->left;
+    t2 = $3->right;
+    newlist = ast_makeCons($2, t2);
+    newlist = ast_makeCons(t1, newlist);
+  
+    //$$=ast_makeAST(AST_NAME, ast_makeSymbol($1), ast_addLast($2,$3));
+    $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), newlist);
+  }
+}
 ;
 
 

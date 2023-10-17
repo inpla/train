@@ -1,4 +1,19 @@
 # Change log
+### v0.0.5-1 (released on 16 Oct 2023)
+
+#### Bugfixes
+
+- **Applications with attributes**: delt with the attributes as application parameters. Now, it is fixed.
+
+  ```
+  >>> add Int.x y = add2.x y;
+  add(rr_0, y) >< Int(int x) =>
+      add2(rr_0, x)~y;
+  >>>
+  ```
+
+
+
 ### v0.0.5 (released on 16 Oct 2023)
 
 #### New Features
