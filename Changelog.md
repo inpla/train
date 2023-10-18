@@ -1,4 +1,20 @@
 # Change log
+
+### v0.0.7 (released on 18 Oct 2023)
+
+#### New Features
+
+- **If-then-else sentences**: If-then-else senteces have been supported, where the conditional expression are expressions on attributes. Nested ones are also allowed:
+
+  ```
+  >>> foo Int.x = if x==1 then Int.x+1 else if x==2 then Int.x+10 else Int.x+100;
+  foo(rr_0) >< Int(int x) =>
+      if x==1 then rr_0~Int(x+1) else if x==2 then rr_0~Int(x+10) else rr_0~Int(x+100);
+  >>>
+  ```
+
+
+
 ### v0.0.6 (released on 18 Oct 2023)
 
 #### New Features

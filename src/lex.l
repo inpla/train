@@ -134,10 +134,13 @@ char *Parse_closeStringBuffer() {
          return (INT_LITERAL);}
 
 <INITIAL>"//"[^\n]* ; //comment
+<INITIAL>"--"[^\n]* ; //comment
 <INITIAL>"/*" BEGIN(COM_STATE);
+<INITIAL>"(*" BEGIN(COM_STATE);
 <COM_STATE>. ;
 <COM_STATE>\n ;
 <COM_STATE>"*/" BEGIN INITIAL; //comment
+<COM_STATE>"*)" BEGIN INITIAL; //comment
 
 
 <INITIAL>\r\n ;
@@ -146,7 +149,7 @@ char *Parse_closeStringBuffer() {
 <INITIAL><<EOF>> {return END_OF_FILE;}
 
 
-<INITIAL>"\{" {
+<INITIAL>"{" {
     Parse_StringBuffer_reInit();
     BEGIN STRING_STATE;
 }
@@ -162,10 +165,10 @@ char *Parse_closeStringBuffer() {
     return STRING_LITERAL;
 }
 <STRING_STATE>\n        {
-//    Parse_addString('\n');
-yyerror("Unterminated string");
-BEGIN(INITIAL);
-return DELIMITER;
+    Parse_addString('\n');
+    //yyerror("Unterminated string");
+    //BEGIN(INITIAL);
+    //return DELIMITER;
 }
 <STRING_STATE>\\\"      Parse_addString('"');
 <STRING_STATE>\\n       Parse_addString('\n');

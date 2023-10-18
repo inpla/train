@@ -21,7 +21,7 @@
 
 
 
-#define VERSION "0.0.6"
+#define VERSION "0.0.7"
 #define BUILT_DATE  "18 Oct 2023"
   
 
@@ -128,8 +128,10 @@ static char *Errormsg = NULL;
 
 
 %type <ast>
-top
+body
+
 func_def
+func_def_compound
 constr_term
 
 declaration_attr
@@ -158,6 +160,8 @@ expr additive_expr equational_expr logical_expr relational_expr unary_expr
 multiplicative_expr primary_expr
 
 
+if_sentence if_compound
+
 %type <chval> term_symbol
 
 
@@ -182,7 +186,7 @@ s
   if (yyin == stdin) yylineno=0;
   YYACCEPT;
 }
-| top DELIMITER
+| body DELIMITER
 {
   exec($1);
 
@@ -194,7 +198,7 @@ s
   YYACCEPT;
 }
 
-| top STRING_LITERAL DELIMITER
+| body STRING_LITERAL DELIMITER
 {
   exec($1);
   printf(",\n    %s", $2);
@@ -205,6 +209,18 @@ s
   if (yyin == stdin) yylineno=0;
   YYACCEPT;
 }
+
+
+| STRING_LITERAL
+{
+  printf("%s\n", $1);
+  fflush(stdout);
+  
+  ast_heapReInit(); 
+  if (yyin == stdin) yylineno=0;
+  YYACCEPT;
+}
+
 
 
 | command {
@@ -242,7 +258,7 @@ command
 
 
 
-top
+body
 : func_def
 | expr
 ; 
@@ -261,7 +277,7 @@ term_symbol
 
 func_def
 : term_symbol constr_term
-LD expression
+LD func_def_compound
 { $$ = ast_makeAST(AST_RULE,
 		   ast_makeCons(ast_makeSymbol($1),
 				ast_makeCons($2, NULL)),
@@ -269,7 +285,7 @@ LD expression
 }
 //
 | term_symbol constr_term names
-LD expression
+LD func_def_compound
 { $$ = ast_makeAST(AST_RULE,
 		   ast_makeCons(ast_makeSymbol($1),
 				ast_makeCons($2, $3)),
@@ -278,7 +294,7 @@ LD expression
 }
 //
 | term_symbol declaration_attr constr_term
-LD expression
+LD func_def_compound
 { $$ = ast_makeAST(AST_RULE,
 		   ast_makeCons(ast_makeSymbol($1),
 				ast_makeCons($3, $2)),
@@ -286,7 +302,7 @@ LD expression
 }
 //
 | term_symbol declaration_attr constr_term names
-LD expression
+LD func_def_compound
 { $$ = ast_makeAST(AST_RULE,
 		   ast_makeCons(ast_makeSymbol($1),
 				ast_makeCons($3,
@@ -295,6 +311,14 @@ LD expression
 }
 ////
 ;
+
+func_def_compound
+: expression
+| if_sentence;
+
+
+
+
 
 declaration_attr
 : DOT attribute { $$ = ast_makeList1($2); }
@@ -566,6 +590,27 @@ nameterm
 
 
 
+// if_sentence
+if_sentence
+: IF expr THEN if_compound ELSE if_compound
+{ $$ = ast_makeAST(AST_IF, $2, ast_makeAST(AST_THEN_ELSE, $4, $6));}
+;
+
+
+if_compound
+: if_sentence
+| expression
+;
+
+
+
+
+
+
+
+
+
+
 %%
 
 
@@ -634,8 +679,8 @@ char* new_name_r() {
 char* new_name_w() {
   char buf[RNUM_STR_LENGTH];
   char *ret;
-  snprintf(buf, RNUM_STR_LENGTH, "%s%d", SUFFIX_FRESH_NAMES_FOR_NESTED, rnum);
-  rnum++;
+  snprintf(buf, RNUM_STR_LENGTH, "%s%d", SUFFIX_FRESH_NAMES_FOR_NESTED, wnum);
+  wnum++;
 
   ret = strndup(buf, RNUM_STR_LENGTH);
   
@@ -988,10 +1033,10 @@ int is_non_nested(Ast *ast) {
   }
     
   default:
-    puts("ERROR: is_non_nested");
-    ast_puts(ast);
-    exit(1);
-    return 0;
+    //    puts("ERROR: is_non_nested");
+    //    ast_puts(ast);
+    //    exit(1);
+    return 1;
   }
 
 }
@@ -1036,6 +1081,9 @@ void compile_nested_params(Ast *body) {
 
 int compile_expression(Ast *sym_list, Ast *body) {
 
+  //  puts("\ncompile_expression");
+  //  ast_puts(body); puts("");
+  
   switch (body->id) {
   case AST_AGENT: {
 
@@ -1157,9 +1205,24 @@ int compile_expression(Ast *sym_list, Ast *body) {
     break;
   }
 
+
+  case AST_IF: {
+    // (AST_IF expr (AST_THEN_ELSE then else))}
+    printf("if ");
+    puts_expr_from_ast(body->left);
+
+    printf(" then ");
+    compile_expression(sym_list, body->right->left);
+
+    printf(" else ");
+    compile_expression(sym_list, body->right->right);
+    break;
+  }
+
     
   default:
     puts("????");
+    printf("log:"); ast_puts(body); puts("");
   }
 
   
@@ -1348,9 +1411,15 @@ int compile_rule(Ast *at) {
     break;
   }
 
+
+  case AST_IF: {
+    compile_expression(sym_list, body);
+    break;
+  }
     
   default:
     puts("???");
+    ast_puts(body);
   }
 
 
