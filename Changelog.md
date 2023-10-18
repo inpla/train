@@ -1,4 +1,26 @@
 # Change log
+### v0.0.6 (released on 18 Oct 2023)
+
+#### New Features
+
+- **Nested terms**: Nested terms have been supported. So, we can write some definitions simply:
+
+  ```
+  >>> add (S x) y = S (add x y);
+  add(rr_0, y) >< S(x) =>
+    add(ww_1, y)~x, rr_0~S(ww_1);
+  >>>
+  ```
+  It was expressed with `let`:
+  ```
+  >>> add (S x) y = let w = add x y in S (w);
+  add(rr_0, y) >< S(x) =>
+    rr_0~S(w), add(w, y)~x;
+  >>>
+  ```
+
+
+
 ### v0.0.5-1 (released on 17 Oct 2023)
 
 #### Bugfixes

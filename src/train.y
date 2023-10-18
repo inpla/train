@@ -21,8 +21,8 @@
 
 
 
-#define VERSION "0.0.5-1"
-#define BUILT_DATE  "17 Oct 2023"
+#define VERSION "0.0.6"
+#define BUILT_DATE  "18 Oct 2023"
   
 
  
@@ -395,7 +395,9 @@ agentterm
 : AGENT
 { $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), NULL); }
 | AGENT agentterms
-{ $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), $2); }
+{
+  $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), $2); }
+
 | NAME 
 { $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), NULL); }
 | NAME agentterms
@@ -411,6 +413,7 @@ agentterm
 | NAME attr_expr agentterms
 {
   // NAME attr [t1,t2,...]  ==> NAME [t1, attr, t2, ...]
+  // This is because t1 must be the constructor for NAME.
   { Ast *t1, *t2, *newlist;
     t1 = $3->left;
     t2 = $3->right;
@@ -424,6 +427,10 @@ agentterm
 ;
 
 
+// [t1, t2, t3]... というようにリスト化されるが
+// t2 が sequence になっているときには [t1, [tt1,tt2,tt3], t3]
+// というようになってしまう。[tt1, tt2, tt3] については正規化が必要で
+// [S, x, y] ならば S(x,y) とする。
 
 agentterms
 : AGENT
@@ -431,14 +438,21 @@ agentterms
 | NAME
 { $$ = ast_makeList1(ast_makeAST(AST_NAME, ast_makeSymbol($1), NULL)); }
 
+
+
 | agentterms AGENT
-{ $$ = ast_addLast($1,
+{
+  $$ = ast_addLast($1,
 		   ast_makeAST(AST_AGENT, ast_makeSymbol($2), NULL));
 }
 | agentterms NAME
-{ $$ = ast_addLast($1,
+{
+  $$ = ast_addLast($1,
 		   ast_makeAST(AST_NAME, ast_makeSymbol($2), NULL));
 }
+
+
+
 //
 // with attributes
 | AGENT attr_expr
@@ -599,8 +613,10 @@ int yyerror(char *s) {
 
 
 int rnum = 0;
+int wnum = 0;
 void init_r() {
   rnum = 0;
+  wnum = 0;
 }
 
 #define RNUM_STR_LENGTH 10
@@ -615,8 +631,23 @@ char* new_name_r() {
   return ret;
 }
 
+char* new_name_w() {
+  char buf[RNUM_STR_LENGTH];
+  char *ret;
+  snprintf(buf, RNUM_STR_LENGTH, "%s%d", SUFFIX_FRESH_NAMES_FOR_NESTED, rnum);
+  rnum++;
+
+  ret = strndup(buf, RNUM_STR_LENGTH);
+  
+  return ret;
+}
+
+
 
 void free_name_r(char *r) {
+  free(r);
+}
+void free_name(char *r) {
   free(r);
 }
 
@@ -869,30 +900,159 @@ void puts_term_from_ast(Ast *p) {
   }
 
     
-  default:
+  default: 
     printf("?-puts_term_from_ast\n");
     printf("id=%d, AST_LIST=%d\n", p->id, AST_LIST);
-    
   }
 }
 
 
 
 
+// LIST(AST_NAME sym NULL, LIST(AST_NAME sym NULL, LIST(AST_NAME sym NULL),...
+// ==>
+// LIST(AST_NAME sym, LIST(AST_NAME sym, LIST(AST_NAME sym,...
+int normalise_function_application(Ast *ast) {
+  if (ast->id != AST_LIST) {
+    return 0;
+  }
+
+  
+  Ast* hd = ast->left;
+  
+  if (hd->id != AST_NAME) {
+    return 0;
+  }
+
+
+  Ast *args = ast->right;
+
+  while (args != NULL) {
+    hd->right = ast_addLast(hd->right, args->left);
+    args = args->right;
+  }
+
+  ast->right = NULL;
+  
+  return 1;
+  
+}
+
+
+
+int is_non_nested(Ast *ast) {
+
+  if (ast == NULL) {
+    return 1;
+  }
+  
+  switch (ast->id) {
+  case AST_AGENT: {
+    Ast *args = ast->right;
+
+    if (args == NULL) {
+      return 1;
+    }
+    
+    while (args != NULL) {
+      if (!is_non_nested(args->left)) {
+	return 0;
+      }
+      args = args->right;
+    }
+    return 1;
+    break;
+  }
+    
+  case AST_NAME: {
+    Ast *args = ast->right;
+    if (args == NULL) {
+      return 1;
+    } else {
+      return 0;
+    }
+  }
+
+  case AST_LIST: {
+    Ast *args = ast->right;
+
+    while (args != NULL) {
+      if (!is_non_nested(args->left)) {
+	return 0;
+      }
+      args = args->right;
+    }
+    return 1;
+    break;
+    
+  }
+    
+  default:
+    puts("ERROR: is_non_nested");
+    ast_puts(ast);
+    exit(1);
+    return 0;
+  }
+
+}
+
+
+
+int compile_expression(Ast *sym_list, Ast *body);
+
+void compile_nested_params(Ast *body) {
+  // body->id == AST_AGENT
+
+  //  puts("compile_nested_params"); ast_puts(body); puts("");
+
+  
+  Ast *args = body->right;
+  
+  while (args != NULL) {
+    Ast *term = args->left;
+    
+    if (normalise_function_application(term)) {
+      // Make it a term by removing the whole list
+      term = term->left;
+    }
+    
+    
+    if (!is_non_nested(term)) {
+      
+      char *new_name = new_name_w();
+      Ast *new_name_sym = ast_makeSymbol(new_name);
+      args->left = ast_makeAST(AST_NAME, new_name_sym, NULL);
+      
+      compile_expression(ast_makeList1(new_name_sym), term);
+      printf(", ");
+      
+      //	free_name(new_name);
+    }
+    
+    args = args->right;
+  }
+    
+}
 
 int compile_expression(Ast *sym_list, Ast *body) {
 
   switch (body->id) {
   case AST_AGENT: {
 
-    // the length of the return bundle is 1
+    compile_nested_params(body);
+    
     Ast *hd_sym_list = ast_getNth(sym_list,0);
     char *sym = hd_sym_list->sym;    
     printf("%s~", sym);
-    
     puts_term_from_ast(body);
+
+    
+    return 1;
+    
+         
     break;
   }
+
     
   case AST_NAME: {
     //T(foo C(...) a b = f a b)
@@ -907,11 +1067,19 @@ int compile_expression(Ast *sym_list, Ast *body) {
 
     if (terms == NULL) {
       //thus, terms is [term].
+
+
       Ast *sym_list_1st = sym_list->left;
+      Ast *terms_1st = body->left;
+
+      //      puts("term_1st"); ast_puts(terms_1st); puts("");
+      //      compile_nested_params(terms_1st);
+      
       puts_term_from_ast(sym_list_1st);
       printf("~");
-      Ast *terms_1st = body->left;
       puts_term_from_ast(terms_1st);
+
+      
       break;
     }
     
@@ -935,9 +1103,43 @@ int compile_expression(Ast *sym_list, Ast *body) {
       sym_list = sym_list->right;
     }
 
+
+
+    
     Ast *f_ast = ast_makeAST(AST_AGENT,
 			     f_name,
 			     param_list);
+
+
+
+    compile_nested_params(f_ast);
+
+    
+    if (constructor_ast->id == AST_LIST) {
+      if (normalise_function_application(constructor_ast)) {
+	// Make it a term by removing the whole list
+	constructor_ast = constructor_ast->left;
+      }
+    }
+    
+    compile_nested_params(constructor_ast);
+
+
+    if ((constructor_ast->id != AST_AGENT)
+	&& ((constructor_ast->id == AST_NAME) &&
+	    (constructor_ast->right != NULL))) {
+      
+      char *new_name = new_name_w();
+      Ast *new_name_sym = ast_makeSymbol(new_name);
+      Ast *orig_constructor_ast = constructor_ast;
+      
+      constructor_ast = ast_makeAST(AST_NAME, new_name_sym, NULL);
+      
+      compile_expression(ast_makeList1(new_name_sym), orig_constructor_ast);
+      printf(", ");
+      
+    }
+    
 
     puts_term_from_ast(f_ast);
     printf("~");
@@ -959,8 +1161,8 @@ int compile_expression(Ast *sym_list, Ast *body) {
   default:
     puts("????");
   }
-    
-    
+
+  
   return 1;
 }
 

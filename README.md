@@ -2,7 +2,7 @@
 
 Translator of the new language of interaction nets. 
 
-- The current version is 0.0.5-1, released on **17 Oct 2023**. (See [Changelog.md](https://github.com/sintan310/train/blob/main/Changelog.md) for details.)
+- The current version is 0.0.6, released on **18 Oct 2023**. (See [Changelog.md](https://github.com/sintan310/train/blob/main/Changelog.md) for details.)
 
 
 
@@ -40,9 +40,9 @@ Translator of the new language of interaction nets.
   >>> inc Z = (S Z);
   inc(rr_0) >< Z =>
       rr_0~S(Z);
-  >>> inc (S x) = let w = inc x in (S w);
+  >>> inc (S x) = S (inc x);
   inc(rr_0) >< S(x) =>
-      rr_0~S(w), inc(w)~x;
+      inc(ww_1)~x, rr_0~S(ww_1);
   >>>
   ```
   
@@ -51,12 +51,12 @@ Translator of the new language of interaction nets.
   >>> add Z x = x;
   add(rr_0, x) >< Z =>
       rr_0~x;
-  >>> add (S y) x = let w=add y x in (S w);
-  add(rr_0, x) >< S(y) =>
-      rr_0~S(w), add(w, x)~y;
-  >>> add (S y) x = add y (S x);
-  add(rr_0, x) >< S(y) =>
-      add(rr_0, S(x))~y;
+  >>> add (S x) y = S (add x y);
+  add(rr_0, y) >< S(x) =>
+      add(ww_1, y)~x, rr_0~S(ww_1);
+  >>> add (S x) y = add x (S y);
+  add(rr_0, y) >< S(x) =>
+      add(rr_0, S(y))~x;
   >>>
   ```
   ```
@@ -103,16 +103,11 @@ Translator of the new language of interaction nets.
   fib Z = Z;
   fib (S x) = fibS x;
   fibS Z = (S Z);
-  fibS (S x) = 
-    let w1=(fibS x1) in 
-    let w2=(fibS x2) in 
-    add w1 w2 
-    { Dup(x1,x2)~x };
-  
+  fibS (S x) = add (fibS x1) (fibS x2) { Dup(x1,x2)~x };
   add Z x = x;
-  add (S y) x = let w=(add x y) in S w;
+  add (S y) x = S(add x y);
   ```
-
+  
   
 
 
@@ -121,7 +116,7 @@ Translator of the new language of interaction nets.
 
 The current version has some limitations:
 
-- Nested terms are not supported. This will be solved in the next version.
+- Nested terms of Let and Bundle are not supported. This will be solved in the next version.
 - Expressions are not supported, just for rules for now. This will be solved in the later version.
 - Built-in constants such as Cons, Nil are not supported.
 
