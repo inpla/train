@@ -84,7 +84,6 @@ char *Parse_closeStringBuffer() {
 <INITIAL>"[" return LB;
 <INITIAL>"]" return RB;
 <INITIAL>"," return (COMMA);
-<INITIAL>"><" return (CROSS);
 <INITIAL>"=>" return (TO);
 <INITIAL>"~" return (CNCT);
 <INITIAL>"-" return (SUB);
@@ -107,13 +106,11 @@ char *Parse_closeStringBuffer() {
 <INITIAL>"/" return (DIV);
 <INITIAL>"%" return (MOD);
 <INITIAL>"_" return (ANY);
-<INITIAL>"<<" return (ABR);
 
 <INITIAL>"int" return(INT);
 
 <INITIAL>"let" return(LET);
 <INITIAL>"in" return(IN);
-<INITIAL>"end" return(END);
 
 <INITIAL>"where" return(WHERE);
 
@@ -121,11 +118,10 @@ char *Parse_closeStringBuffer() {
 <INITIAL>"then" return(THEN);
 <INITIAL>"else" return(ELSE);
 
+<INITIAL>"main" return(MAIN);
 
-<INITIAL>"use" return(USE);
 
-<INITIAL>"*L" return(ANNOTATE_L);
-<INITIAL>"*R" return(ANNOTATE_R);
+
 <INITIAL>[a-z][a-zA-Z0-9_']* { yylval.chval = strdup(yytext);
          return (NAME);}
 <INITIAL>[A-Z][a-zA-Z0-9_']* { yylval.chval = strdup(yytext);

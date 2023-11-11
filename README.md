@@ -2,7 +2,7 @@
 
 Translator of the new language of interaction nets. 
 
-- The current version is 0.0.7, released on **18 Oct 2023**. (See [Changelog.md](https://github.com/sintan310/train/blob/main/Changelog.md) for details.)
+- The current version is 0.1.0, released on **11 Nov 2023**. (See [Changelog.md](https://github.com/sintan310/train/blob/main/Changelog.md) for details.)
 
 
 
@@ -110,39 +110,32 @@ Translator of the new language of interaction nets.
   fib Z = Z;
   fib (S x) = fibS x;
   fibS Z = (S Z);
-  fibS (S x) = add (fibS x1) (fibS x2) { Dup(x1,x2)~x };
+  fibS (S x) = add (fib x1) (fibS x2) { Dup(x1,x2)~x };
   add Z x = x;
   add (S y) x = S(add x y);
   
-  -- main (Inpla notataion)
-  {
-    r << fib(S(S(Z)));
-    r;
-  }
+  -- main
+  main = fib (S(S(S(S(S(S Z)))))); -- should be 8 because 0 1 1 2 3 5 8
   ```
 
 - GCD
 
   ```
-  (*
-   Sample in Python
+  (* Sample in Python
    def gcd(a, b):
      if b==0: return a 
      else: return gcd(b, a%b)
   *)
   
-  gcd Params.(a,b) = 
+  gcd IntPair.(a,b) = 
     if b==0 then Int.a 
-    else gcd Params.(b, a%b);
+    else gcd IntPair.(b, a%b);
   
   
-  -- main (Inpla notation)
-  {
-    r << gcd(Params(14,21)); // should be Int(7)
-    r;
-  }
+  -- main
+  main = gcd IntPair.(14,21);  -- should be 7.
   ```
-
+  
   
 
 
@@ -151,8 +144,8 @@ Translator of the new language of interaction nets.
 
 The current version has some limitations:
 
-- Nested terms of Let and Bundle are not supported. This will be solved in the next version.
-- Expressions are not supported, just for rules for now. This will be solved in the later version.
+- The number of bundles of functions must be one for now. In future, these numbers are recorded with function symbols, and correctly decided.
+
 - Built-in constants such as Cons, Nil are not supported.
 
 

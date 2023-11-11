@@ -21,8 +21,8 @@
 
 
 
-#define VERSION "0.0.7"
-#define BUILT_DATE  "18 Oct 2023"
+#define VERSION "0.1.0"
+#define BUILT_DATE  "11 Nov 2023"
   
 
  
@@ -114,7 +114,7 @@ static char *Errormsg = NULL;
 %token <chval> NAME AGENT ALPHA_NUMERAL
 %token <longval> INT_LITERAL
 %token <chval> STRING_LITERAL
-%token LP RP LB RB COMMA CROSS ABR
+%token LP RP LB RB COMMA
 %token COLON DOT
 %token TO CNCT
 %token DELIMITER 
@@ -123,13 +123,11 @@ static char *Errormsg = NULL;
 
 %token PIPE CR
 %token NOT AND OR LD EQUAL NE GT GE LT LE
-%token ADD SUB MUL DIV MOD INT LET IN END IF THEN ELSE ANY WHERE
-%token END_OF_FILE USE
+%token ADD SUB MUL DIV MOD INT LET IN IF THEN ELSE ANY WHERE
+%token END_OF_FILE USE MAIN
 
 
 %type <ast>
-body
-
 func_def
 func_def_compound
 constr_term
@@ -138,6 +136,7 @@ declaration_attr
 attribute
 attribute_list
 
+body
 
 expression
 expression_let
@@ -162,11 +161,14 @@ multiplicative_expr primary_expr
 
 if_sentence if_compound
 
-%type <chval> term_symbol
+
+ //%type <chval> term_symbol
 
 
 %nonassoc REDUCE
 %nonassoc RP
+
+
 
 %right COLON
 
@@ -186,7 +188,8 @@ s
   if (yyin == stdin) yylineno=0;
   YYACCEPT;
 }
-| body DELIMITER
+
+| func_def DELIMITER
 {
   exec($1);
 
@@ -198,7 +201,7 @@ s
   YYACCEPT;
 }
 
-| body STRING_LITERAL DELIMITER
+| func_def STRING_LITERAL DELIMITER
 {
   exec($1);
   printf(",\n    %s", $2);
@@ -221,12 +224,26 @@ s
   YYACCEPT;
 }
 
+| body DELIMITER
+{
+  exec($1);
+
+  puts(";");
+  fflush(stdout);
+  
+  ast_heapReInit(); 
+  if (yyin == stdin) yylineno=0;
+  YYACCEPT;
+}
+
+
 
 
 | command {
   if (yyin == stdin) yylineno=0;
   YYACCEPT;
-};
+}
+;
 
 
 
@@ -258,15 +275,13 @@ command
 
 
 
-body
-: func_def
-| expr
-; 
-
+/*
 term_symbol
 : NAME  { $$ = $1; }
-| AGENT { $$ = $1; }
+//| AGENT { $$ = $1; }
 ;
+*/
+
 
 
 // (AST_RULE
@@ -276,16 +291,14 @@ term_symbol
 
 
 func_def
-: term_symbol constr_term
-LD func_def_compound
+: NAME constr_term LD func_def_compound
 { $$ = ast_makeAST(AST_RULE,
 		   ast_makeCons(ast_makeSymbol($1),
 				ast_makeCons($2, NULL)),
 		   $4);
 }
 //
-| term_symbol constr_term names
-LD func_def_compound
+| NAME constr_term names LD func_def_compound
 { $$ = ast_makeAST(AST_RULE,
 		   ast_makeCons(ast_makeSymbol($1),
 				ast_makeCons($2, $3)),
@@ -293,24 +306,24 @@ LD func_def_compound
 
 }
 //
-| term_symbol declaration_attr constr_term
-LD func_def_compound
+| NAME declaration_attr constr_term LD func_def_compound
 { $$ = ast_makeAST(AST_RULE,
 		   ast_makeCons(ast_makeSymbol($1),
 				ast_makeCons($3, $2)),
 		   $5);
 }
 //
-| term_symbol declaration_attr constr_term names
-LD func_def_compound
+| NAME declaration_attr constr_term names LD func_def_compound
 { $$ = ast_makeAST(AST_RULE,
 		   ast_makeCons(ast_makeSymbol($1),
 				ast_makeCons($3,
 					     ast_addLast($2,$4))),
 		   $6);
 }
-////
 ;
+
+
+
 
 func_def_compound
 : expression
@@ -361,6 +374,27 @@ constr_term
 ;
 
 
+
+
+body
+/*
+// (AST_BODY name_params expression)
+: name_params
+{ $$ = ast_makeAST(AST_BODY, $1, NULL); }
+| name_params LD expression
+{ $$ = ast_makeAST(AST_BODY,$1, $3); }
+*/
+
+// (AST_BODY expression NULL)
+//: expression_let { $$ = ast_makeAST(AST_BODY, $1, NULL); }
+//: name_params { $$ = ast_makeAST(AST_BODY, $1, NULL); }
+//: expression { $$ = ast_makeAST(AST_BODY, $1, NULL); }
+: MAIN LD expression  { $$ = ast_makeAST(AST_BODY, $3, NULL); }
+| LET LP RP LD expression
+{
+  $$ = ast_makeAST(AST_BODY, $5, NULL);
+}
+; 
 
 
 
@@ -417,15 +451,33 @@ agentterm
 // (AST_AGENT sym arglists)
 // (AST_NAME sym arglists)
 : AGENT
-{ $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), NULL); }
+{ 
+  $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), NULL);
+}
 | AGENT agentterms
-{
-  $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), $2); }
+{  
+  Ast *terms = $2;
+  if (terms->id != AST_LIST) {
+    terms = ast_makeList1(terms);
+  }
+  $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), terms);
+}
 
-| NAME 
+
+
+| NAME
 { $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), NULL); }
 | NAME agentterms
-{ $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), $2); }
+{
+  Ast *terms = $2;
+  if (terms->id != AST_LIST) {
+    terms = ast_makeList1(terms);
+  }
+  
+  $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), terms);
+  
+}
+
 //
 // with attr_expr
 | AGENT attr_expr
@@ -458,23 +510,24 @@ agentterm
 
 agentterms
 : AGENT
-{ $$ = ast_makeList1(ast_makeAST(AST_AGENT, ast_makeSymbol($1), NULL)); }
+{ 
+  $$ = ast_makeList1(ast_makeAST(AST_AGENT, ast_makeSymbol($1), NULL)); }
 | NAME
-{ $$ = ast_makeList1(ast_makeAST(AST_NAME, ast_makeSymbol($1), NULL)); }
+{ 
+$$ = ast_makeList1(ast_makeAST(AST_NAME, ast_makeSymbol($1), NULL)); }
 
 
 
 | agentterms AGENT
-{
+{ 
   $$ = ast_addLast($1,
 		   ast_makeAST(AST_AGENT, ast_makeSymbol($2), NULL));
 }
 | agentterms NAME
-{
+{ 
   $$ = ast_addLast($1,
 		   ast_makeAST(AST_NAME, ast_makeSymbol($2), NULL));
 }
-
 
 
 //
@@ -492,17 +545,23 @@ agentterms
 { $$ = ast_addLast($1,
 		   ast_makeAST(AST_NAME, ast_makeSymbol($2), $3));
 }
-//
-//
-| LP agentterms RP { $$ = ast_makeList1($2); }
-| agentterms LP agentterm RP { $$ = ast_addLast($1,$3); }
+
+
+| LP agentterm RP
+{
+  $$ = ast_makeList1($2);
+}
+| agentterms LP agentterm RP { 
+  $$ = ast_addLast($1,$3);
+}
 ;
+
+
 
 
 
 names
 : NAME { $$=ast_makeList1(ast_makeSymbol($1)); }
-//| name_params NAME
 | names NAME
 { $$= ast_addLast($1, ast_makeSymbol($2));
 }
@@ -848,10 +907,12 @@ void puts_term_from_ast(Ast *p) {
     puts_term_from_ast(p->left);
     break;
 
-    
+
+    /*
   case AST_APP:
     puts("APP-APP");
     break;
+    */
     
   case AST_AGENT: {
     
@@ -954,36 +1015,6 @@ void puts_term_from_ast(Ast *p) {
 
 
 
-// LIST(AST_NAME sym NULL, LIST(AST_NAME sym NULL, LIST(AST_NAME sym NULL),...
-// ==>
-// LIST(AST_NAME sym, LIST(AST_NAME sym, LIST(AST_NAME sym,...
-int normalise_function_application(Ast *ast) {
-  if (ast->id != AST_LIST) {
-    return 0;
-  }
-
-  
-  Ast* hd = ast->left;
-  
-  if (hd->id != AST_NAME) {
-    return 0;
-  }
-
-
-  Ast *args = ast->right;
-
-  while (args != NULL) {
-    hd->right = ast_addLast(hd->right, args->left);
-    args = args->right;
-  }
-
-  ast->right = NULL;
-  
-  return 1;
-  
-}
-
-
 
 int is_non_nested(Ast *ast) {
 
@@ -1049,17 +1080,18 @@ void compile_nested_params(Ast *body) {
   // body->id == AST_AGENT
 
   //  puts("compile_nested_params"); ast_puts(body); puts("");
-
   
   Ast *args = body->right;
   
   while (args != NULL) {
     Ast *term = args->left;
-    
+
+    /*
     if (normalise_function_application(term)) {
       // Make it a term by removing the whole list
       term = term->left;
     }
+    */
     
     
     if (!is_non_nested(term)) {
@@ -1108,7 +1140,7 @@ int compile_expression(Ast *sym_list, Ast *body) {
           
     // (AST_NAME sym [args])
     // (f a b1 b2) ==> f(sym1, sym2, ..., b1, b2) ~ a
-
+    
     Ast *f_name = body->left;               // AST_SYM
     
     Ast *terms = body->right;
@@ -1130,49 +1162,67 @@ int compile_expression(Ast *sym_list, Ast *body) {
       
       break;
     }
+
+
     
     // [constructor_ast, f_param_list ...]
     Ast *constructor_ast = terms->left;
     Ast *f_param_list = terms->right;
 
+
+    //    puts("f_param_list"); ast_puts(f_param_list); puts("");
+    
+    
     // Change sym in sym_list into AST_NAME
     // and append it to f_param_list
-    Ast *param_list = sym_list;
-    while (sym_list != NULL) {
-      Ast *elem = sym_list->left;
-      sym_list->left = ast_makeAST(AST_NAME, elem, NULL);
-      if (sym_list->right == NULL) {
+    Ast *sym_list_at = sym_list;
+    Ast *params = NULL;
+    while (sym_list_at != NULL) {
+      Ast *elem = sym_list_at->left;
+      params = ast_addLast(params,
+			   ast_makeAST(AST_NAME, elem, NULL));
+
+      if (sym_list_at->right == NULL) {
 	// Append
-	sym_list->right = f_param_list;
+	//sym_list_at->right = f_param_list;
+	if (f_param_list != NULL) {
+	  // f_param_list is already a list,
+	  // so f_param_list->left must be added as an element.
+	  params = ast_addLast(params, f_param_list->left);
+	}
+	
 	break;
       }
       
       // next
-      sym_list = sym_list->right;
+      sym_list_at = sym_list_at->right;
     }
 
-
-
+    /*
+    if (f_param_list != NULL) {
+      params = ast_addLast(params, f_param_list);
+      puts("params"); ast_puts(params); puts("");
+    }
+    */
+    
+    //        puts("params"); ast_puts(params); puts("");
     
     Ast *f_ast = ast_makeAST(AST_AGENT,
 			     f_name,
-			     param_list);
+			     params);
 
 
 
+    //        puts("f_ast"); ast_puts(f_ast); puts("");
+    
+    
+    
     compile_nested_params(f_ast);
 
     
-    if (constructor_ast->id == AST_LIST) {
-      if (normalise_function_application(constructor_ast)) {
-	// Make it a term by removing the whole list
-	constructor_ast = constructor_ast->left;
-      }
-    }
-    
     compile_nested_params(constructor_ast);
 
-
+    
     if ((constructor_ast->id != AST_AGENT)
 	&& ((constructor_ast->id == AST_NAME) &&
 	    (constructor_ast->right != NULL))) {
@@ -1188,8 +1238,8 @@ int compile_expression(Ast *sym_list, Ast *body) {
       
     }
     
-
     puts_term_from_ast(f_ast);
+
     printf("~");
     puts_term_from_ast(constructor_ast);
     
@@ -1201,7 +1251,16 @@ int compile_expression(Ast *sym_list, Ast *body) {
 
     
   case AST_LET: {
-    puts("LET");
+    //(LET (LD (SYM_LIST x1 x2 x3) TERM) TERM)
+    Ast *param_list = sym_list;
+    Ast *mainbody = body->right;
+    Ast *let_variables = body->left->left;
+    Ast *let_mainbody = body->left->right;
+    
+    compile_expression(let_variables, let_mainbody);
+    printf(", ");
+    compile_expression(param_list, mainbody);
+            
     break;
   }
 
@@ -1216,6 +1275,29 @@ int compile_expression(Ast *sym_list, Ast *body) {
 
     printf(" else ");
     compile_expression(sym_list, body->right->right);
+    break;
+  }
+
+  case AST_LIST: {
+    Ast *param_list = sym_list;
+    Ast *bundle = body;
+    
+    while (param_list != NULL) {
+      Ast *elem = param_list->left;
+      Ast *bundle_elem = bundle->left;
+      if (bundle_elem == NULL) {
+	break;
+      }
+      compile_expression(ast_makeList1(elem), bundle_elem);
+      
+      param_list = param_list->right;
+      bundle = bundle->right;
+
+      if (param_list != NULL) {
+	printf(", ");
+      }
+    }
+    
     break;
   }
 
@@ -1442,9 +1524,49 @@ int compile(Ast *ast) {
   //    puts("compile");
 
   switch (ast->id) {
+  case AST_BODY: {
+    // (AST_BODY expression NULL)
+
+    int bundle_arity = 1;
+    
+    if (ast->left->id == AST_LET) {
+      //(LET (LD (SYM_LIST x1 x2 x3) TERM1) TERM2)
+      Ast *term2 = ast->left->right;
+      
+      if (term2->id == AST_LIST) {
+	bundle_arity = ast_getLen(term2);
+      }
+    }
+
+    // According to the bundle num,
+    // a fresh sym list is built.
+    Ast *sym_list = NULL;
+    for (int i=0; i<bundle_arity; i++) {
+      sym_list = ast_addLast(sym_list, ast_makeSymbol(new_name_r()));
+    }
+    
+    compile_expression(sym_list, ast->left);
+    puts(";");
+    puts_term_from_ast(sym_list);
+    
+
+    /*
+    // (AST_BODY name_params expression)
+    if (ast->right == NULL) {
+      // ex. a;
+      puts_term_from_ast(ast->left);
+    } else {
+      // ex. a,b = expression
+      compile_expression(ast->left, ast->right);
+    }
+    */
+
+    
+    break;
+  }
+    
   case AST_RULE:
     return compile_rule(ast);
-    puts("END");
     break;
 
     

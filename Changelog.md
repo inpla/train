@@ -1,5 +1,27 @@
 # Change log
 
+### v0.1.0 (released on 11 Nov 2023)
+
+#### New Features
+
+- **Main expression**: The main expression is supported. For now it can be written in Haskel and OCaml styles. It could be changed in future how it can fit to this language design.
+
+  ```
+  -- Haskell style
+  main = add (S Z) (S(S Z));
+  ```
+
+  ```
+  -- OCaml style
+  let () = add (S Z) (S(S Z));
+  ```
+
+
+#### Buxfixes
+- **Parsing**: Some deeply nested terms  were not correctly parased. Now it is fixed.
+
+
+
 ### v0.0.7 (released on 18 Oct 2023)
 
 #### New Features
