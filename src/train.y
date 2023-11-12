@@ -21,8 +21,8 @@
 
 
 
-#define VERSION "0.1.0"
-#define BUILT_DATE  "11 Nov 2023"
+#define VERSION "0.1.1"
+#define BUILT_DATE  "12 Nov 2023"
   
 
  
@@ -140,14 +140,13 @@ body
 
 expression
 expression_let
-expression_bundle
 expression_atom
 expression_agentterm
 
-agentterm
 agentterms
+agentterms_constructor
+agentterms_constr_attr
 
-names
 name_params
 nameterm
 
@@ -166,7 +165,7 @@ if_sentence if_compound
 
 
 %nonassoc REDUCE
-%nonassoc RP
+ //%nonassoc RP
 
 
 
@@ -298,11 +297,11 @@ func_def
 		   $4);
 }
 //
-| NAME constr_term names LD func_def_compound
+| NAME constr_term COMMA name_params LD func_def_compound
 { $$ = ast_makeAST(AST_RULE,
 		   ast_makeCons(ast_makeSymbol($1),
-				ast_makeCons($2, $3)),
-		   $5);
+				ast_makeCons($2, $4)),
+		   $6);
 
 }
 //
@@ -313,12 +312,12 @@ func_def
 		   $5);
 }
 //
-| NAME declaration_attr constr_term names LD func_def_compound
+| NAME declaration_attr constr_term COMMA name_params LD func_def_compound
 { $$ = ast_makeAST(AST_RULE,
 		   ast_makeCons(ast_makeSymbol($1),
 				ast_makeCons($3,
-					     ast_addLast($2,$4))),
-		   $6);
+					     ast_addLast($2,$5))),
+		   $7);
 }
 ;
 
@@ -366,11 +365,33 @@ constr_term
 { $$=ast_makeAST(AST_AGENT, ast_makeSymbol($2), $3); }
 //
 //
-| LP AGENT agentterms RP
-{ $$=ast_makeAST(AST_AGENT, ast_makeSymbol($2), $3); }
+| LP AGENT agentterms_constructor RP
+{ $$=ast_makeAST(AST_AGENT,
+		 ast_makeSymbol($2),
+		 ast_makeList1($3)); }
 //
-| LP AGENT declaration_attr agentterms RP
-{ $$=ast_makeAST(AST_AGENT, ast_makeSymbol($2), ast_addLast($3,$4)); }
+| LP AGENT declaration_attr agentterms_constructor agentterms RP
+{ $$=ast_makeAST(AST_AGENT,
+		 ast_makeSymbol($2),
+		 ast_addLast($3,$4)); }
+//
+//
+| LP AGENT agentterms_constructor COMMA agentterms RP
+{ $$=ast_makeAST(AST_AGENT,
+		 ast_makeSymbol($2),
+		 ast_makeCons($3, $5));
+}
+//
+| LP AGENT declaration_attr agentterms_constructor COMMA agentterms RP
+{
+  Ast *terms = $6;
+  if (terms != NULL) {
+    terms = ast_makeCons($4, terms);
+  }
+  $$=ast_makeAST(AST_AGENT,
+		 ast_makeSymbol($2),
+		 ast_addLast($3,terms));
+}
 ;
 
 
@@ -389,6 +410,7 @@ body
 //: expression_let { $$ = ast_makeAST(AST_BODY, $1, NULL); }
 //: name_params { $$ = ast_makeAST(AST_BODY, $1, NULL); }
 //: expression { $$ = ast_makeAST(AST_BODY, $1, NULL); }
+
 : MAIN LD expression  { $$ = ast_makeAST(AST_BODY, $3, NULL); }
 | LET LP RP LD expression
 {
@@ -401,29 +423,15 @@ body
 
 expression
 : expression_let
+| agentterms  // e1, e2 => (LIST e1 (LIST e2 NULL))
 ;
-
 
 expression_let
 //(LET (LD (SYM_LIST x1 x2 x3) TERM) TERM)
 : LET name_params LD expression IN expression
 { $$ = ast_makeAST(AST_LET,
 		   ast_makeAST(AST_LD, $2, $4),
-		   $6); }
-
-| expression_bundle
-;
-
-
-expression_bundle
-// e1, e2 => (LIST e1 (LIST e2 NULL))
-: expression_agentterm COMMA expression
-{
-  if ($3->id != AST_LIST) {
-    $$ = ast_makeCons($1,ast_makeList1($3));
-  } else {
-    $$ = ast_makeCons($1,$3);
-  }
+		   $6);
 }
 | expression_agentterm
 ;
@@ -431,61 +439,56 @@ expression_bundle
 
 
 
-
 expression_agentterm
-: agentterm
-| expression_atom
-;
-
-
-
-expression_atom
-: 
-LP expression RP { $$ = $2; }
-;
-
-
-
-
-agentterm
-// (AST_AGENT sym arglists)
-// (AST_NAME sym arglists)
 : AGENT
 { 
   $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), NULL);
 }
+| AGENT expression_agentterm
+{  
+  $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), ast_makeList1($2));
+}
 | AGENT agentterms
 {  
-  Ast *terms = $2;
-  if (terms->id != AST_LIST) {
-    terms = ast_makeList1(terms);
-  }
-  $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), terms);
+  $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), $2);
 }
-
-
-
 | NAME
-{ $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), NULL); }
-| NAME agentterms
-{
-  Ast *terms = $2;
-  if (terms->id != AST_LIST) {
-    terms = ast_makeList1(terms);
-  }
-  
-  $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), terms);
-  
+{ 
+  $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), NULL);
 }
+| NAME expression_agentterm
+{  
+  $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), ast_makeList1($2));
+}
+| NAME agentterms
+{  
+  $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), $2);
+}
+| expression_atom
 
 //
 // with attr_expr
 | AGENT attr_expr
-{ $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), $2); }
+{
+  $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), $2);
+}
+| AGENT attr_expr expression_agentterm
+{
+  $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), ast_addLast($2,$3));
+}
 | AGENT attr_expr agentterms
-{ $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), ast_addLast($2,$3)); }
-| NAME  attr_expr
-{ $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), $2); }
+{
+  $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), ast_addLast($2,$3));
+}
+| NAME attr_expr
+{
+  $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), $2);
+}
+| NAME attr_expr expression_agentterm
+{
+  // NAME attr t1  ==> NAME [t1, attr]
+  $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), ast_makeCons($3, $2));
+}
 | NAME attr_expr agentterms
 {
   // NAME attr [t1,t2,...]  ==> NAME [t1, attr, t2, ...]
@@ -503,56 +506,51 @@ agentterm
 ;
 
 
-// [t1, t2, t3]... というようにリスト化されるが
-// t2 が sequence になっているときには [t1, [tt1,tt2,tt3], t3]
-// というようになってしまう。[tt1, tt2, tt3] については正規化が必要で
-// [S, x, y] ならば S(x,y) とする。
 
 agentterms
+: agentterms_constr_attr COMMA agentterms_constr_attr
+{ 
+  $$ = ast_makeList2($1, $3);
+}
+| agentterms COMMA agentterms_constr_attr
+{ 
+  $$ = ast_addLast($1, $3);
+}
+| LP expression_agentterm RP COMMA agentterms_constr_attr
+{
+  $$ = ast_makeList2($2, $5);
+}
+| agentterms_constr_attr COMMA LP expression_agentterm RP
+{
+  $$ = ast_makeList2($1, $4);
+}
+| LP expression_agentterm RP COMMA LP expression_agentterm RP
+{
+  $$ = ast_makeList2($2, $6);
+}
+;
+
+
+agentterms_constructor
 : AGENT
 { 
-  $$ = ast_makeList1(ast_makeAST(AST_AGENT, ast_makeSymbol($1), NULL)); }
+  $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), NULL);
+}
 | NAME
 { 
-$$ = ast_makeList1(ast_makeAST(AST_NAME, ast_makeSymbol($1), NULL)); }
-
-
-
-| agentterms AGENT
-{ 
-  $$ = ast_addLast($1,
-		   ast_makeAST(AST_AGENT, ast_makeSymbol($2), NULL));
+  $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), NULL);
 }
-| agentterms NAME
-{ 
-  $$ = ast_addLast($1,
-		   ast_makeAST(AST_NAME, ast_makeSymbol($2), NULL));
-}
+;
 
-
-//
-// with attributes
+agentterms_constr_attr
+: agentterms_constructor
 | AGENT attr_expr
-{ $$ = ast_makeList1(ast_makeAST(AST_AGENT, ast_makeSymbol($1), $2)); }
+{ 
+  $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), $2);
+}
 | NAME attr_expr
-{ $$ = ast_makeList1(ast_makeAST(AST_NAME, ast_makeSymbol($1), $2)); }
-
-| agentterms AGENT attr_expr
-{ $$ = ast_addLast($1,
-		   ast_makeAST(AST_AGENT, ast_makeSymbol($2), $3));
-}
-| agentterms NAME attr_expr
-{ $$ = ast_addLast($1,
-		   ast_makeAST(AST_NAME, ast_makeSymbol($2), $3));
-}
-
-
-| LP agentterm RP
-{
-  $$ = ast_makeList1($2);
-}
-| agentterms LP agentterm RP { 
-  $$ = ast_addLast($1,$3);
+{ 
+  $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), $2);
 }
 ;
 
@@ -560,12 +558,21 @@ $$ = ast_makeList1(ast_makeAST(AST_NAME, ast_makeSymbol($1), NULL)); }
 
 
 
-names
-: NAME { $$=ast_makeList1(ast_makeSymbol($1)); }
-| names NAME
-{ $$= ast_addLast($1, ast_makeSymbol($2));
-}
+
+
+
+expression_atom
+: 
+LP expression_agentterm RP { $$ = $2; }
 ;
+
+
+
+
+
+
+
+
 
 
 name_params
@@ -1526,7 +1533,7 @@ int compile(Ast *ast) {
   switch (ast->id) {
   case AST_BODY: {
     // (AST_BODY expression NULL)
-
+    
     int bundle_arity = 1;
     
     if (ast->left->id == AST_LET) {
@@ -1536,6 +1543,9 @@ int compile(Ast *ast) {
       if (term2->id == AST_LIST) {
 	bundle_arity = ast_getLen(term2);
       }
+      
+    } else if (ast->left->id == AST_LIST) {
+      bundle_arity = ast_getLen(ast->left);
     }
 
     // According to the bundle num,

@@ -2,7 +2,7 @@
 
 Translator of the new language of interaction nets. 
 
-- The current version is 0.1.0, released on **11 Nov 2023**. (See [Changelog.md](https://github.com/sintan310/train/blob/main/Changelog.md) for details.)
+- The current version is 0.1.1, released on **12 Nov 2023**. (See [Changelog.md](https://github.com/sintan310/train/blob/main/Changelog.md) for details.)
 
 
 
@@ -48,13 +48,13 @@ Translator of the new language of interaction nets.
   
   
   ```
-  >>> add Z x = x;
+  >>> add Z,x = x;
   add(rr_0, x) >< Z =>
       rr_0~x;
-  >>> add (S x) y = S (add x y);
+  >>> add (S x),y = S (add x,y);
   add(rr_0, y) >< S(x) =>
       add(ww_1, y)~x, rr_0~S(ww_1);
-  >>> add (S x) y = add x (S y);
+  >>> add (S x),y = add x,(S y);
   add(rr_0, y) >< S(x) =>
       add(rr_0, S(y))~x;
   >>>
@@ -79,7 +79,7 @@ Translator of the new language of interaction nets.
   >>> inc Int.x = Int.(x+1);
   inc(rr_0) >< Int(int x) =>
       rr_0~Int(x+1);
-  >>> add Int.x y = add2.x y;
+  >>> add (Int.x), y = add2.x y;
   add(rr_0, y) >< Int(int x) =>
       add2(rr_0, x)~y;
   >>> add2.x Int.y = Int.(x+y);
@@ -110,9 +110,9 @@ Translator of the new language of interaction nets.
   fib Z = Z;
   fib (S x) = fibS x;
   fibS Z = (S Z);
-  fibS (S x) = add (fib x1) (fibS x2) { Dup(x1,x2)~x };
+  fibS (S x) = add (fib x1), (fibS x2) { Dup(x1,x2)~x };
   add Z x = x;
-  add (S y) x = S(add x y);
+  add (S y),x = S(add x,y);
   
   -- main
   main = fib (S(S(S(S(S(S Z)))))); -- should be 8 because 0 1 1 2 3 5 8
@@ -127,13 +127,13 @@ Translator of the new language of interaction nets.
      else: return gcd(b, a%b)
   *)
   
-  gcd IntPair.(a,b) = 
+  gcd Pair.(a,b) = 
     if b==0 then Int.a 
-    else gcd IntPair.(b, a%b);
+    else gcd Pair.(b, a%b);
   
   
   -- main
-  main = gcd IntPair.(14,21);  -- should be 7.
+  main = gcd Pair.(14,21);  -- should be 7.
   ```
   
   

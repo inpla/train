@@ -1,5 +1,13 @@
 # Change log
 
+### v0.1.1 (released on 12 Nov 2023)
+#### Polished
+
+- **Separator between arguments**: The separator between arguments is changed from space into '`,`'  as the formal definition is updated so. From this version, `add x y` is written as `add x,y`.
+
+  
+
+
 ### v0.1.0 (released on 11 Nov 2023)
 
 #### New Features
@@ -17,7 +25,7 @@
   ```
 
 
-#### Buxfixes
+#### Bux fixes
 - **Parsing**: Some deeply nested terms  were not correctly parased. Now it is fixed.
 
 
@@ -61,7 +69,7 @@
 
 ### v0.0.5-1 (released on 17 Oct 2023)
 
-#### Bugfixes
+#### Bug fixes
 
 - **Applications with attributes**: delt with the attributes as application parameters. Now, it is fixed.
 
