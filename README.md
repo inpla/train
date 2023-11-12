@@ -111,7 +111,7 @@ Translator of the new language of interaction nets.
   fib (S x) = fibS x;
   fibS Z = (S Z);
   fibS (S x) = add (fib x1), (fibS x2) { Dup(x1,x2)~x };
-  add Z x = x;
+  add Z,x = x;
   add (S y),x = S(add x,y);
   
   -- main
