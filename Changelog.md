@@ -3,7 +3,7 @@
 ### v0.1.2 (released on 14 Nov 2023)
 #### New features
 
-- **Bundle arities**: When functions return *n*-bundles, the number *n* is recorded with the function symbol. The number is used when the function is applied. For example, the following `dup` returns a 2-bundle, and it is delt with a function that returns a 2-bundle: 
+- **Bundle arities**: When functions return *n*-bundles, the number *n* is recorded with the function symbol. The number is used when the function is applied. For example, the following `dup` returns a 2-bundle, and it is dealt with a function that returns a 2-bundle: 
 
   ```
   >>> dup Z = Z,Z;
