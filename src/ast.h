@@ -5,15 +5,11 @@
 
 typedef enum {
   AST_SYM=0, AST_NAME, AST_INTVAR, AST_AGENT,
-  AST_CNCT, AST_CNCT_TCO_INTVAR, AST_CNCT_TCO_CONS, AST_CNCT_TCO,
   AST_RULE, AST_BODY, AST_IF, AST_THEN_ELSE, AST_LET, AST_APP,
   AST_BUNDLE, 
   
   // this is for ASTLIST
   AST_LIST,
-
-  // annotation
-  AST_ANNOTATION_L, AST_ANNOTATION_R, 
 
   // builtin tuple
   AST_TUPLE, 
@@ -29,7 +25,6 @@ typedef enum {
   AST_RAND, AST_SRAND,
 
   // for PERCENT
-  AST_PERCENT,
 } AST_ID;
 
 
@@ -54,7 +49,10 @@ int ast_getLen(Ast *p);
 void ast_puts(Ast *p);
 Ast *ast_paramToCons(Ast *ast);
 int ast_recordConst(char *name, int val);
-int ast_getRecordedVal(int entry);
+int ast_lookupConst(char *name, int *val);  // return 1 when it is success.
+int ast_lookupSymTable(char *name);
+void ast_symTableInit();
+
 
 #define ast_makeCons(x1,x2) ast_makeAST(AST_LIST,(x1),(x2))
 #define ast_makeList1(x1) ast_makeAST(AST_LIST,(x1),NULL)

@@ -66,6 +66,8 @@ int lookupEntry(SymbolTable *table, char *name) {
   return -1;
 }
 
+
+
 int ast_getRecordedVal(int entry) {
   return ConstTable.val[entry];
 }
@@ -134,6 +136,17 @@ static Ast *ast_myalloc(void) {
 }
 
 
+
+void ast_symTableInit() {
+  SymTable_init(&SymTable);
+}
+
+
+int ast_lookupSymTable(char *name) {
+  return lookupEntry(&SymTable, name);
+}
+
+
 Ast *ast_makeSymbol(char *name) {
   Ast *ptr;
   ptr = ast_myalloc();
@@ -141,6 +154,8 @@ Ast *ast_makeSymbol(char *name) {
   ptr->sym = recordSymbol(&SymTable, name);
   return ptr;
 }
+
+
 
 Ast *ast_makeInt(long num) {
   Ast *ptr;
@@ -159,6 +174,18 @@ int ast_recordConst(char *name, int val) {
   }
 }
 
+
+int ast_lookupConst(char *name, int *val) {
+    int entry = lookupEntry(&ConstTable, name);
+    if (entry != -1) {
+      *val = ConstTable.val[entry];
+      return 1;
+      
+    } else {
+      *val = 1;
+      return 0;
+    }
+}
 
 
 Ast *ast_makeAST(AST_ID id, Ast *left, Ast *right) {
@@ -274,15 +301,11 @@ void ast_puts(Ast *p) {
   static char *string_AstID[] = {
     // basic
     "SYM", "NAME", "INTNAME", "AGENT",
-    "CNCT", "CNCT_TRO_INT", "CNCT_TRO_CONS", "CNCT_TRO",
     "RULE", "BODY", "IF", "THEN_ELSE", "LET", "APP",
     "BUNDLE", 
 
     // LIST
     "LIST", 
-
-    // annotation
-    "(*L)", "(*R)",
 
     // extension
     "TUPLE", 
@@ -292,7 +315,6 @@ void ast_puts(Ast *p) {
     
     "CONS", "NIL", 
     "RAND", "SRAND", 
-    "PERCENT",
     
     // default
     "UNDEFINED",

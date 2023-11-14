@@ -21,8 +21,8 @@
 
 
 
-#define VERSION "0.1.1"
-#define BUILT_DATE  "12 Nov 2023"
+#define VERSION "0.1.2"
+#define BUILT_DATE  "14 Nov 2023"
   
 
  
@@ -128,27 +128,29 @@ static char *Errormsg = NULL;
 
 
 %type <ast>
-func_def
-func_def_compound
-constr_term
+fundef
+fundef_body
+fundef_constr
 
-declaration_attr
-attribute
-attribute_list
+
+fundef_attr
+fundef_attr_dec
+fundef_attr_dec_list
 
 body
 
-expression
-expression_let
-expression_atom
-expression_agentterm
+if_sentence if_compound
 
-agentterms
-agentterms_constructor
-agentterms_constr_attr
+term
+term_let
+term_agent
+term_atom
 
-name_params
-nameterm
+agents
+agents_constructor
+agents_constr_attr
+
+name_list
 
 attr_expr
 attr_expr_body
@@ -158,7 +160,6 @@ expr additive_expr equational_expr logical_expr relational_expr unary_expr
 multiplicative_expr primary_expr
 
 
-if_sentence if_compound
 
 
  //%type <chval> term_symbol
@@ -188,7 +189,7 @@ s
   YYACCEPT;
 }
 
-| func_def DELIMITER
+| fundef DELIMITER
 {
   exec($1);
 
@@ -200,9 +201,10 @@ s
   YYACCEPT;
 }
 
-| func_def STRING_LITERAL DELIMITER
+| fundef STRING_LITERAL DELIMITER
 {
   exec($1);
+
   printf(",\n    %s", $2);
   puts(";");
   fflush(stdout);
@@ -251,6 +253,7 @@ command
 {
   if (!(strcmp($2, "quit"))) {
     destroy(); exit(0);
+    
   } else if (!(strcmp($2, "q"))) {
     destroy(); exit(0);    
 
@@ -258,6 +261,7 @@ command
     printf("ERROR: No operation for the given command.");
   }
 }
+  
 | error END_OF_FILE {}
 | END_OF_FILE {
   if (!popFP()) {
@@ -274,30 +278,22 @@ command
 
 
 
-/*
-term_symbol
-: NAME  { $$ = $1; }
-//| AGENT { $$ = $1; }
-;
-*/
-
-
 
 // (AST_RULE
 //      [foo_sym_agent, const_agent, params1, params2, ...]
-//      (AST_BUNDLE [expression1, expression2,...] NULL)
+//      (AST_BUNDLE [term1, term2,...] NULL)
 // )
 
 
-func_def
-: NAME constr_term LD func_def_compound
+fundef
+: NAME fundef_constr LD fundef_body
 { $$ = ast_makeAST(AST_RULE,
 		   ast_makeCons(ast_makeSymbol($1),
 				ast_makeCons($2, NULL)),
 		   $4);
 }
 //
-| NAME constr_term COMMA name_params LD func_def_compound
+| NAME fundef_constr COMMA name_list LD fundef_body
 { $$ = ast_makeAST(AST_RULE,
 		   ast_makeCons(ast_makeSymbol($1),
 				ast_makeCons($2, $4)),
@@ -305,14 +301,14 @@ func_def
 
 }
 //
-| NAME declaration_attr constr_term LD func_def_compound
+| NAME fundef_attr fundef_constr LD fundef_body
 { $$ = ast_makeAST(AST_RULE,
 		   ast_makeCons(ast_makeSymbol($1),
 				ast_makeCons($3, $2)),
 		   $5);
 }
 //
-| NAME declaration_attr constr_term COMMA name_params LD func_def_compound
+| NAME fundef_attr fundef_constr COMMA name_list LD fundef_body
 { $$ = ast_makeAST(AST_RULE,
 		   ast_makeCons(ast_makeSymbol($1),
 				ast_makeCons($3,
@@ -324,65 +320,65 @@ func_def
 
 
 
-func_def_compound
-: expression
+fundef_body
+: term
 | if_sentence;
 
 
 
 
 
-declaration_attr
-: DOT attribute { $$ = ast_makeList1($2); }
-| DOT LP attribute RP { $$ = ast_makeList1($3); }
-| DOT LP attribute COMMA attribute_list RP
+fundef_attr
+: DOT fundef_attr_dec { $$ = ast_makeList1($2); }
+| DOT LP fundef_attr_dec RP { $$ = ast_makeList1($3); }
+| DOT LP fundef_attr_dec COMMA fundef_attr_dec_list RP
 { $$ = ast_makeCons($3, $5); }
 ;
 
 
-attribute
+fundef_attr_dec
 : NAME { $$ = ast_makeAST(AST_INTVAR, ast_makeSymbol($1), NULL); }
 ;
 
-attribute_list
-: attribute { $$ = ast_makeList1($1); }
-| attribute_list COMMA attribute { $$ = ast_addLast($1, $3); }
+fundef_attr_dec_list
+: fundef_attr_dec { $$ = ast_makeList1($1); }
+| fundef_attr_dec_list COMMA fundef_attr_dec { $$ = ast_addLast($1, $3); }
 ;
 
 
-constr_term
+fundef_constr
 : AGENT 
 { $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), NULL); }
 //
-| AGENT declaration_attr
+| AGENT fundef_attr
 { $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), $2); }
 //
 //
 | LP AGENT RP
 { $$=ast_makeAST(AST_AGENT, ast_makeSymbol($2), NULL); }
 //
-| LP AGENT declaration_attr RP
+| LP AGENT fundef_attr RP
 { $$=ast_makeAST(AST_AGENT, ast_makeSymbol($2), $3); }
 //
 //
-| LP AGENT agentterms_constructor RP
+| LP AGENT agents_constructor RP
 { $$=ast_makeAST(AST_AGENT,
 		 ast_makeSymbol($2),
 		 ast_makeList1($3)); }
 //
-| LP AGENT declaration_attr agentterms_constructor agentterms RP
+| LP AGENT fundef_attr agents_constructor agents RP
 { $$=ast_makeAST(AST_AGENT,
 		 ast_makeSymbol($2),
 		 ast_addLast($3,$4)); }
 //
 //
-| LP AGENT agentterms_constructor COMMA agentterms RP
+| LP AGENT agents_constructor COMMA agents RP
 { $$=ast_makeAST(AST_AGENT,
 		 ast_makeSymbol($2),
 		 ast_makeCons($3, $5));
 }
 //
-| LP AGENT declaration_attr agentterms_constructor COMMA agentterms RP
+| LP AGENT fundef_attr agents_constructor COMMA agents RP
 {
   Ast *terms = $6;
   if (terms != NULL) {
@@ -398,21 +394,9 @@ constr_term
 
 
 body
-/*
-// (AST_BODY name_params expression)
-: name_params
-{ $$ = ast_makeAST(AST_BODY, $1, NULL); }
-| name_params LD expression
-{ $$ = ast_makeAST(AST_BODY,$1, $3); }
-*/
-
-// (AST_BODY expression NULL)
-//: expression_let { $$ = ast_makeAST(AST_BODY, $1, NULL); }
-//: name_params { $$ = ast_makeAST(AST_BODY, $1, NULL); }
-//: expression { $$ = ast_makeAST(AST_BODY, $1, NULL); }
-
-: MAIN LD expression  { $$ = ast_makeAST(AST_BODY, $3, NULL); }
-| LET LP RP LD expression
+// (AST_BODY term NULL)
+: MAIN LD term  { $$ = ast_makeAST(AST_BODY, $3, NULL); }
+| LET LP RP LD term
 {
   $$ = ast_makeAST(AST_BODY, $5, NULL);
 }
@@ -421,34 +405,34 @@ body
 
 
 
-expression
-: expression_let
-| agentterms  // e1, e2 => (LIST e1 (LIST e2 NULL))
+term
+: term_let
+| agents  // e1, e2 => (LIST e1 (LIST e2 NULL))
 ;
 
-expression_let
+term_let
 //(LET (LD (SYM_LIST x1 x2 x3) TERM) TERM)
-: LET name_params LD expression IN expression
+: LET name_list LD term IN term
 { $$ = ast_makeAST(AST_LET,
 		   ast_makeAST(AST_LD, $2, $4),
 		   $6);
 }
-| expression_agentterm
+| term_agent
 ;
 
 
 
 
-expression_agentterm
+term_agent
 : AGENT
 { 
   $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), NULL);
 }
-| AGENT expression_agentterm
+| AGENT term_agent
 {  
   $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), ast_makeList1($2));
 }
-| AGENT agentterms
+| AGENT agents
 {  
   $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), $2);
 }
@@ -456,15 +440,15 @@ expression_agentterm
 { 
   $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), NULL);
 }
-| NAME expression_agentterm
+| NAME term_agent
 {  
   $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), ast_makeList1($2));
 }
-| NAME agentterms
+| NAME agents
 {  
   $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), $2);
 }
-| expression_atom
+| term_atom
 
 //
 // with attr_expr
@@ -472,11 +456,11 @@ expression_agentterm
 {
   $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), $2);
 }
-| AGENT attr_expr expression_agentterm
+| AGENT attr_expr term_agent
 {
   $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), ast_addLast($2,$3));
 }
-| AGENT attr_expr agentterms
+| AGENT attr_expr agents
 {
   $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), ast_addLast($2,$3));
 }
@@ -484,12 +468,12 @@ expression_agentterm
 {
   $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), $2);
 }
-| NAME attr_expr expression_agentterm
+| NAME attr_expr term_agent
 {
   // NAME attr t1  ==> NAME [t1, attr]
   $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), ast_makeCons($3, $2));
 }
-| NAME attr_expr agentterms
+| NAME attr_expr agents
 {
   // NAME attr [t1,t2,...]  ==> NAME [t1, attr, t2, ...]
   // This is because t1 must be the constructor for NAME.
@@ -507,31 +491,31 @@ expression_agentterm
 
 
 
-agentterms
-: agentterms_constr_attr COMMA agentterms_constr_attr
+agents
+: agents_constr_attr COMMA agents_constr_attr
 { 
   $$ = ast_makeList2($1, $3);
 }
-| agentterms COMMA agentterms_constr_attr
+| agents COMMA agents_constr_attr
 { 
   $$ = ast_addLast($1, $3);
 }
-| LP expression_agentterm RP COMMA agentterms_constr_attr
+| LP term_agent RP COMMA agents_constr_attr
 {
   $$ = ast_makeList2($2, $5);
 }
-| agentterms_constr_attr COMMA LP expression_agentterm RP
+| agents_constr_attr COMMA LP term_agent RP
 {
   $$ = ast_makeList2($1, $4);
 }
-| LP expression_agentterm RP COMMA LP expression_agentterm RP
+| LP term_agent RP COMMA LP term_agent RP
 {
   $$ = ast_makeList2($2, $6);
 }
 ;
 
 
-agentterms_constructor
+agents_constructor
 : AGENT
 { 
   $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), NULL);
@@ -542,8 +526,8 @@ agentterms_constructor
 }
 ;
 
-agentterms_constr_attr
-: agentterms_constructor
+agents_constr_attr
+: agents_constructor
 | AGENT attr_expr
 { 
   $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), $2);
@@ -561,9 +545,9 @@ agentterms_constr_attr
 
 
 
-expression_atom
+term_atom
 : 
-LP expression_agentterm RP { $$ = $2; }
+LP term_agent RP { $$ = $2; }
 ;
 
 
@@ -575,9 +559,9 @@ LP expression_agentterm RP { $$ = $2; }
 
 
 
-name_params
+name_list
 : NAME { $$=ast_makeList1(ast_makeSymbol($1)); }
-| name_params COMMA NAME
+| name_list COMMA NAME
 { $$= ast_addLast($1, ast_makeSymbol($3));
 }
 ;
@@ -644,14 +628,12 @@ unary_expr
 ;
 
 primary_expr
-: nameterm { $$ = $1;}
+:NAME {$$=ast_makeAST(AST_NAME, ast_makeSymbol($1), NULL);}
 | INT_LITERAL { $$ = ast_makeInt($1); }
 //| AGENT { $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), NULL); }
 | LP expr RP { $$ = $2; }
 ;
 
-nameterm
-: NAME {$$=ast_makeAST(AST_NAME, ast_makeSymbol($1), NULL);}
 
 
 
@@ -665,7 +647,7 @@ if_sentence
 
 if_compound
 : if_sentence
-| expression
+| term
 ;
 
 
@@ -719,48 +701,92 @@ int yyerror(char *s) {
 
 
 
+// -------------------------------------------------
+// Management of fresh names
+// -------------------------------------------------
+
+int FreshName_rnum = 0;
+int FreshName_wnum = 0;
+
+#define MAX_FRESHNAME 256
+int FreshName_table_idx = 0;
+char* FreshName_table[MAX_FRESHNAME];
+
+#define FRESH_STRBUF_LENGTH 10
 
 
+void FreshName_ClearCounter() {
 
+  FreshName_rnum = 0;
+  FreshName_wnum = 0;
+  ast_symTableInit();
 
-int rnum = 0;
-int wnum = 0;
-void init_r() {
-  rnum = 0;
-  wnum = 0;
+  FreshName_table_idx = 0;
+}  
+
+void FreshName_Init() {
+  FreshName_ClearCounter();
+  for (int i=0; i<MAX_FRESHNAME; i++) {
+    FreshName_table[i] = NULL;
+  }
 }
 
-#define RNUM_STR_LENGTH 10
-char* new_name_r() {
-  char buf[RNUM_STR_LENGTH];
-  char *ret;
-  snprintf(buf, RNUM_STR_LENGTH, "%s%d", SUFFIX_FRESH_NAMES, rnum);
-  rnum++;
+void FreshName_reInit() {
+  FreshName_ClearCounter();
+  for (int i = 0; i < FreshName_table_idx; i++) {
+    if (FreshName_table[i] != NULL) {
+      free(FreshName_table[i]);
+    }
+  }
+}
 
-  ret = strndup(buf, RNUM_STR_LENGTH);
+
+void FreshName_record(char *freshname) {
+  FreshName_table[FreshName_table_idx] = freshname;
+  FreshName_table_idx++;  
+}
+
+char* FreshName_new(char *suffix, int *counter) {
+  char buf[FRESH_STRBUF_LENGTH];
+  char *ret;
+
+  while (1) {
+  
+    snprintf(buf, FRESH_STRBUF_LENGTH, "%s%d",
+	     suffix, *counter);
+
+    *counter = *counter + 1;
+
+    if (ast_lookupSymTable(buf) == -1) {
+      break;
+    }
+    
+  }
+
+  ret = strndup(buf, FRESH_STRBUF_LENGTH);
+
+  FreshName_record(ret);
   
   return ret;
 }
 
-char* new_name_w() {
-  char buf[RNUM_STR_LENGTH];
-  char *ret;
-  snprintf(buf, RNUM_STR_LENGTH, "%s%d", SUFFIX_FRESH_NAMES_FOR_NESTED, wnum);
-  wnum++;
 
-  ret = strndup(buf, RNUM_STR_LENGTH);
-  
-  return ret;
+char* FreshName_new_r() {
+  return FreshName_new(SUFFIX_FRESH_NAMES, &FreshName_rnum);
+}
+
+
+char* FreshName_new_w() {
+  return FreshName_new(SUFFIX_FRESH_NAMES_FOR_NESTED, &FreshName_wnum);
 }
 
 
 
-void free_name_r(char *r) {
-  free(r);
-}
-void free_name(char *r) {
-  free(r);
-}
+
+
+// -------------------------------------------------
+
+
 
 
 void puts_expr_from_ast_equational(Ast *p);
@@ -1081,7 +1107,7 @@ int is_non_nested(Ast *ast) {
 
 
 
-int compile_expression(Ast *sym_list, Ast *body);
+int compile_term(Ast *sym_list, Ast *body);
 
 void compile_nested_params(Ast *body) {
   // body->id == AST_AGENT
@@ -1103,11 +1129,11 @@ void compile_nested_params(Ast *body) {
     
     if (!is_non_nested(term)) {
       
-      char *new_name = new_name_w();
+      char *new_name = FreshName_new_w();
       Ast *new_name_sym = ast_makeSymbol(new_name);
       args->left = ast_makeAST(AST_NAME, new_name_sym, NULL);
       
-      compile_expression(ast_makeList1(new_name_sym), term);
+      compile_term(ast_makeList1(new_name_sym), term);
       printf(", ");
       
       //	free_name(new_name);
@@ -1118,9 +1144,9 @@ void compile_nested_params(Ast *body) {
     
 }
 
-int compile_expression(Ast *sym_list, Ast *body) {
+int compile_term(Ast *sym_list, Ast *body) {
 
-  //  puts("\ncompile_expression");
+  //  puts("\ncompile_term");
   //  ast_puts(body); puts("");
   
   switch (body->id) {
@@ -1234,13 +1260,13 @@ int compile_expression(Ast *sym_list, Ast *body) {
 	&& ((constructor_ast->id == AST_NAME) &&
 	    (constructor_ast->right != NULL))) {
       
-      char *new_name = new_name_w();
+      char *new_name = FreshName_new_w();
       Ast *new_name_sym = ast_makeSymbol(new_name);
       Ast *orig_constructor_ast = constructor_ast;
       
       constructor_ast = ast_makeAST(AST_NAME, new_name_sym, NULL);
       
-      compile_expression(ast_makeList1(new_name_sym), orig_constructor_ast);
+      compile_term(ast_makeList1(new_name_sym), orig_constructor_ast);
       printf(", ");
       
     }
@@ -1264,9 +1290,9 @@ int compile_expression(Ast *sym_list, Ast *body) {
     Ast *let_variables = body->left->left;
     Ast *let_mainbody = body->left->right;
     
-    compile_expression(let_variables, let_mainbody);
+    compile_term(let_variables, let_mainbody);
     printf(", ");
-    compile_expression(param_list, mainbody);
+    compile_term(param_list, mainbody);
             
     break;
   }
@@ -1278,10 +1304,10 @@ int compile_expression(Ast *sym_list, Ast *body) {
     puts_expr_from_ast(body->left);
 
     printf(" then ");
-    compile_expression(sym_list, body->right->left);
+    compile_term(sym_list, body->right->left);
 
     printf(" else ");
-    compile_expression(sym_list, body->right->right);
+    compile_term(sym_list, body->right->right);
     break;
   }
 
@@ -1295,7 +1321,7 @@ int compile_expression(Ast *sym_list, Ast *body) {
       if (bundle_elem == NULL) {
 	break;
       }
-      compile_expression(ast_makeList1(elem), bundle_elem);
+      compile_term(ast_makeList1(elem), bundle_elem);
       
       param_list = param_list->right;
       bundle = bundle->right;
@@ -1363,7 +1389,7 @@ int compile_rule(Ast *at) {
     //    ast_puts(rhs); puts("");
     
     printf(", ");
-    compile_expression(symlist, rhs);
+    compile_term(symlist, rhs);
 
     // Finish
     return 1;
@@ -1371,46 +1397,51 @@ int compile_rule(Ast *at) {
   }
 
 
+  // The first def_list (ie, sym)
+  char *func_sym = at->left->left->sym;
+
+
   
-  int bundle_arity;
+  // Calculation of bundle_arity
+  int bundle_arity = 1;
   if (body->id == AST_LIST) {
-    bundle_arity = ast_getLen(body);
-
+    bundle_arity = ast_getLen(body);  
     
+  } else if (body->id == AST_NAME) {
+    ast_lookupConst(body->left->sym, &bundle_arity);
     
-  } else {
-    // AST_AGENT or AST_NAME
-
-    // we have to memorise the number of returning bundles.
-    // But, anyway we assume that it is just 1.
-
-    bundle_arity = 1;
-
   }
-    
 
+  
+  // Memorise the bundle_arity with sym
+  ast_recordConst(func_sym, bundle_arity);
+
+    
   
   
   // make the responsible names: r1, r2, r3, ...
   // according to the number bundle_arity
   Ast *sym_list = NULL;
   for (int i=0; i<bundle_arity; i++) {
-    sym_list = ast_addLast(sym_list, ast_makeSymbol(new_name_r()));
+    sym_list = ast_addLast(sym_list, ast_makeSymbol(FreshName_new_r()));
   }
 
 
   
   // Operation for LHS
+
+  // The first def_list (ie, sym)
   Ast *def_list = at->left;
-
   
-  Ast *ast_sym = def_list->left;
-  char *sym = ast_sym->sym;
-  printf("%s(", sym);
+  //  Ast *ast_sym = def_list->left;
+  //  char *sym = ast_sym->sym;
+  printf("%s(", func_sym);
 
 
+
+		  
+  // The second def_list (ie, constr)
   def_list = def_list->right;
-
   
   Ast *constr = def_list->left;
     
@@ -1426,8 +1457,8 @@ int compile_rule(Ast *at) {
   }
 
   
+  // The third def_list (ie, param_list)
   Ast *param_list = def_list->right;
-
   
   while (param_list != NULL) {
     printf(", ");
@@ -1445,6 +1476,7 @@ int compile_rule(Ast *at) {
   printf(" =>\n    ");
 
   
+  // Operation for LHS
   
   
   switch (body->id) {
@@ -1475,7 +1507,7 @@ int compile_rule(Ast *at) {
     //ast_puts(body); puts("");
 
     
-    compile_expression(sym_list, body);
+    compile_term(sym_list, body);
     
     break;
   }
@@ -1486,7 +1518,7 @@ int compile_rule(Ast *at) {
     Ast *syms = sym_list;
 
     while (exps != NULL) {
-      compile_expression(ast_makeList1(syms->left), exps->left);
+      compile_term(ast_makeList1(syms->left), exps->left);
 
       exps = exps->right;
       syms = syms->right;
@@ -1502,7 +1534,7 @@ int compile_rule(Ast *at) {
 
 
   case AST_IF: {
-    compile_expression(sym_list, body);
+    compile_term(sym_list, body);
     break;
   }
     
@@ -1511,14 +1543,6 @@ int compile_rule(Ast *at) {
     ast_puts(body);
   }
 
-
-  // free names
-  p = sym_list;
-  while (p != NULL) {
-    free_name_r(p->left->sym);
-    p = p->right;
-  }
-    
 
 
   
@@ -1546,32 +1570,25 @@ int compile(Ast *ast) {
       
     } else if (ast->left->id == AST_LIST) {
       bundle_arity = ast_getLen(ast->left);
+      
+    } else if (ast->left->id == AST_NAME) {
+      char *sym = ast->left->left->sym;
+      ast_lookupConst(sym, &bundle_arity);
+      
     }
+    
 
-    // According to the bundle num,
+    // According to the bundle arity,
     // a fresh sym list is built.
     Ast *sym_list = NULL;
     for (int i=0; i<bundle_arity; i++) {
-      sym_list = ast_addLast(sym_list, ast_makeSymbol(new_name_r()));
+      sym_list = ast_addLast(sym_list, ast_makeSymbol(FreshName_new_r()));
     }
     
-    compile_expression(sym_list, ast->left);
+    compile_term(sym_list, ast->left);
     puts(";");
     puts_term_from_ast(sym_list);
-    
-
-    /*
-    // (AST_BODY name_params expression)
-    if (ast->right == NULL) {
-      // ex. a;
-      puts_term_from_ast(ast->left);
-    } else {
-      // ex. a,b = expression
-      compile_expression(ast->left, ast->right);
-    }
-    */
-
-    
+        
     break;
   }
     
@@ -1598,13 +1615,14 @@ int exec(Ast *at) {
   puts("DEBUG: ast_puts");
   ast_puts(at); puts("");
 #endif
+
+
+  FreshName_reInit();
   
-  init_r();     // initialise the number for r.
 
   compile(at);
     
-  
-  
+    
   
   return 1;
 }
@@ -1649,10 +1667,8 @@ int main(int argc, char *argv[])
 
   ast_heapInit();
 
-  
-  
-  
-  
+  FreshName_Init();     // initialise FreshName.
+      
   
   linenoiseHistoryLoad(".train.history.txt");
 
