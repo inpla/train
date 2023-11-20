@@ -21,8 +21,8 @@
 
 
 
-#define VERSION "0.1.2"
-#define BUILT_DATE  "14 Nov 2023"
+#define VERSION "0.1.3"
+#define BUILT_DATE  "20 Nov 2023"
   
 
  
@@ -133,9 +133,9 @@ fundef_body
 fundef_constr
 
 
-fundef_attr
-fundef_attr_dec
-fundef_attr_dec_list
+attr_declaration
+attr_name
+attr_name_list
 
 body
 
@@ -146,9 +146,9 @@ term_let
 term_agent
 term_atom
 
-agents
-agents_constructor
-agents_constr_attr
+agent_list
+agent_list_atom
+
 
 name_list
 
@@ -202,6 +202,7 @@ s
 }
 
 | fundef STRING_LITERAL DELIMITER
+//| fundef COMMA STRING_LITERAL DELIMITER
 {
   exec($1);
 
@@ -301,14 +302,14 @@ fundef
 
 }
 //
-| NAME fundef_attr fundef_constr LD fundef_body
+| NAME attr_declaration fundef_constr LD fundef_body
 { $$ = ast_makeAST(AST_RULE,
 		   ast_makeCons(ast_makeSymbol($1),
 				ast_makeCons($3, $2)),
 		   $5);
 }
 //
-| NAME fundef_attr fundef_constr COMMA name_list LD fundef_body
+| NAME attr_declaration fundef_constr COMMA name_list LD fundef_body
 { $$ = ast_makeAST(AST_RULE,
 		   ast_makeCons(ast_makeSymbol($1),
 				ast_makeCons($3,
@@ -320,65 +321,50 @@ fundef
 
 
 
-fundef_body
-: term
-| if_sentence;
-
-
-
-
-
-fundef_attr
-: DOT fundef_attr_dec { $$ = ast_makeList1($2); }
-| DOT LP fundef_attr_dec RP { $$ = ast_makeList1($3); }
-| DOT LP fundef_attr_dec COMMA fundef_attr_dec_list RP
-{ $$ = ast_makeCons($3, $5); }
-;
-
-
-fundef_attr_dec
-: NAME { $$ = ast_makeAST(AST_INTVAR, ast_makeSymbol($1), NULL); }
-;
-
-fundef_attr_dec_list
-: fundef_attr_dec { $$ = ast_makeList1($1); }
-| fundef_attr_dec_list COMMA fundef_attr_dec { $$ = ast_addLast($1, $3); }
-;
-
-
+// A constructor term in a function definition declaration
 fundef_constr
+// ex. Z
 : AGENT 
 { $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), NULL); }
 //
-| AGENT fundef_attr
-{ $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), $2); }
-//
-//
+// ex. (Z)
 | LP AGENT RP
 { $$=ast_makeAST(AST_AGENT, ast_makeSymbol($2), NULL); }
 //
-| LP AGENT fundef_attr RP
-{ $$=ast_makeAST(AST_AGENT, ast_makeSymbol($2), $3); }
-//
-//
-| LP AGENT agents_constructor RP
+/*
+| LP AGENT agent_list_atom RP
 { $$=ast_makeAST(AST_AGENT,
 		 ast_makeSymbol($2),
 		 ast_makeList1($3)); }
 //
-| LP AGENT fundef_attr agents_constructor agents RP
-{ $$=ast_makeAST(AST_AGENT,
-		 ast_makeSymbol($2),
-		 ast_addLast($3,$4)); }
-//
-//
-| LP AGENT agents_constructor COMMA agents RP
+| LP AGENT agent_list_atom COMMA agent_list RP
 { $$=ast_makeAST(AST_AGENT,
 		 ast_makeSymbol($2),
 		 ast_makeCons($3, $5));
 }
+*/
+
+// ex. (S x)  (S x,y)
+| LP AGENT name_list RP
+{ $$=ast_makeAST(AST_AGENT,
+		 ast_makeSymbol($2),
+		 $3); }
+
 //
-| LP AGENT fundef_attr agents_constructor COMMA agents RP
+//
+| AGENT attr_declaration
+{ $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), $2); }
+//
+| LP AGENT attr_declaration RP
+{ $$=ast_makeAST(AST_AGENT, ast_makeSymbol($2), $3); }
+//
+/*
+| LP AGENT attr_declaration agent_list_atom agent_list RP
+{ $$=ast_makeAST(AST_AGENT,
+		 ast_makeSymbol($2),
+		 ast_addLast($3,$4)); }
+//
+| LP AGENT attr_declaration agent_list_atom COMMA agent_list RP
 {
   Ast *terms = $6;
   if (terms != NULL) {
@@ -388,6 +374,38 @@ fundef_constr
 		 ast_makeSymbol($2),
 		 ast_addLast($3,terms));
 }
+*/
+| LP AGENT attr_declaration name_list RP
+{ $$=ast_makeAST(AST_AGENT,
+		 ast_makeSymbol($2),
+		 ast_addLast($3,$4)); }
+
+;
+
+
+
+fundef_body
+: term
+| if_sentence;
+
+
+
+
+
+
+attr_declaration
+: DOT attr_name { $$ = ast_makeList1($2); }
+| DOT LP attr_name_list RP { $$ = $3; }
+;
+
+
+attr_name
+: NAME { $$ = ast_makeAST(AST_INTVAR, ast_makeSymbol($1), NULL); }
+;
+
+attr_name_list
+: attr_name { $$ = ast_makeList1($1); }
+| attr_name_list COMMA attr_name { $$ = ast_addLast($1, $3); }
 ;
 
 
@@ -407,7 +425,7 @@ body
 
 term
 : term_let
-| agents  // e1, e2 => (LIST e1 (LIST e2 NULL))
+| agent_list  // e1, e2 => (LIST e1 (LIST e2 NULL))
 ;
 
 term_let
@@ -432,7 +450,7 @@ term_agent
 {  
   $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), ast_makeList1($2));
 }
-| AGENT agents
+| AGENT agent_list
 {  
   $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), $2);
 }
@@ -444,7 +462,7 @@ term_agent
 {  
   $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), ast_makeList1($2));
 }
-| NAME agents
+| NAME agent_list
 {  
   $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), $2);
 }
@@ -460,7 +478,7 @@ term_agent
 {
   $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), ast_addLast($2,$3));
 }
-| AGENT attr_expr agents
+| AGENT attr_expr agent_list
 {
   $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), ast_addLast($2,$3));
 }
@@ -473,7 +491,7 @@ term_agent
   // NAME attr t1  ==> NAME [t1, attr]
   $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), ast_makeCons($3, $2));
 }
-| NAME attr_expr agents
+| NAME attr_expr agent_list
 {
   // NAME attr [t1,t2,...]  ==> NAME [t1, attr, t2, ...]
   // This is because t1 must be the constructor for NAME.
@@ -491,23 +509,32 @@ term_agent
 
 
 
-agents
-: agents_constr_attr COMMA agents_constr_attr
+agent_list
+// atom , atom
+: agent_list_atom COMMA agent_list_atom
 { 
   $$ = ast_makeList2($1, $3);
 }
-| agents COMMA agents_constr_attr
+//
+// agent_list , atom
+| agent_list COMMA agent_list_atom
 { 
   $$ = ast_addLast($1, $3);
 }
-| LP term_agent RP COMMA agents_constr_attr
+//
+// (term) , atom
+| LP term_agent RP COMMA agent_list_atom
 {
   $$ = ast_makeList2($2, $5);
 }
-| agents_constr_attr COMMA LP term_agent RP
+//
+// atom , (term)
+| agent_list_atom COMMA LP term_agent RP
 {
   $$ = ast_makeList2($1, $4);
 }
+//
+// (term), (term)
 | LP term_agent RP COMMA LP term_agent RP
 {
   $$ = ast_makeList2($2, $6);
@@ -515,7 +542,8 @@ agents
 ;
 
 
-agents_constructor
+
+agent_list_atom
 : AGENT
 { 
   $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), NULL);
@@ -524,10 +552,6 @@ agents_constructor
 { 
   $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), NULL);
 }
-;
-
-agents_constr_attr
-: agents_constructor
 | AGENT attr_expr
 { 
   $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), $2);

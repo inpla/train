@@ -1,5 +1,12 @@
 # Change log
 
+### v0.1.3 (released on 20 Nov 2023)
+
+#### Bug fixes
+- **Parsing**: In function definitions, the parsing fails when given constructor terms have multiple arguments. Now it is fixed.
+
+
+
 ### v0.1.2 (released on 14 Nov 2023)
 #### New features
 
@@ -50,8 +57,8 @@
   ```
 
 
-#### Bux fixes
-- **Parsing**: Some deeply nested terms  were not correctly parased. Now it is fixed.
+#### Bug fixes
+- **Parsing**: Some deeply nested terms were not correctly parsed. Now it is fixed.
 
 
 
@@ -59,7 +66,7 @@
 
 #### New Features
 
-- **If-then-else sentences**: If-then-else senteces have been supported, where the conditional expression are expressions on attributes. Nested ones are also allowed:
+- **If-then-else sentences**: If-then-else senteses have been supported, where the conditional expression are expressions on attributes. Nested ones are also allowed:
 
   ```
   >>> foo Int.x = if x==1 then Int.x+1 else if x==2 then Int.x+10 else Int.x+100;
