@@ -21,8 +21,8 @@
 
 
 
-#define VERSION "0.1.3"
-#define BUILT_DATE  "20 Nov 2023"
+#define VERSION "0.1.4"
+#define BUILT_DATE  "24 Nov 2023"
   
 
  
@@ -1203,7 +1203,7 @@ int compile_term(Ast *sym_list, Ast *body) {
     Ast *terms = body->right;
 
     if (terms == NULL) {
-      //thus, terms is [term].
+      //thus, the terms is [t].
 
 
       Ast *sym_list_1st = sym_list->left;
@@ -1227,7 +1227,7 @@ int compile_term(Ast *sym_list, Ast *body) {
     Ast *f_param_list = terms->right;
 
 
-    //    puts("f_param_list"); ast_puts(f_param_list); puts("");
+    //        puts("f_param_list"); ast_puts(f_param_list); puts("");
     
     
     // Change sym in sym_list into AST_NAME
@@ -1241,12 +1241,17 @@ int compile_term(Ast *sym_list, Ast *body) {
 
       if (sym_list_at->right == NULL) {
 	// Append
-	//sym_list_at->right = f_param_list;
+	// sym_list_at->right = f_param_list;
+	params->right = f_param_list;
+
+	/*
 	if (f_param_list != NULL) {
 	  // f_param_list is already a list,
 	  // so f_param_list->left must be added as an element.
 	  params = ast_addLast(params, f_param_list->left);
 	}
+	*/
+
 	
 	break;
       }
@@ -1429,10 +1434,13 @@ int compile_rule(Ast *at) {
   // Calculation of bundle_arity
   int bundle_arity = 1;
   if (body->id == AST_LIST) {
-    bundle_arity = ast_getLen(body);  
+    bundle_arity = ast_getLen(body);
+
+    
     
   } else if (body->id == AST_NAME) {
-    ast_lookupConst(body->left->sym, &bundle_arity);
+
+    ast_lookupConst(body->left->sym, &bundle_arity);    
     
   }
 
@@ -1464,7 +1472,7 @@ int compile_rule(Ast *at) {
 
 
 		  
-  // The second def_list (ie, constr)
+  // The second element of def_list (ie, constr)
   def_list = def_list->right;
   
   Ast *constr = def_list->left;
@@ -1481,7 +1489,7 @@ int compile_rule(Ast *at) {
   }
 
   
-  // The third def_list (ie, param_list)
+  // The third element of def_list (ie, param_list)
   Ast *param_list = def_list->right;
   
   while (param_list != NULL) {

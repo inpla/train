@@ -1,9 +1,33 @@
 # Change log
 
+### v0.1.4 (released on 24 Nov 2023)
+
+#### Bug fixes
+- **Parsing**: In function definitions, the parsing failed if the left-hand side had functions with more than one argument. Now it is fixed. For example, in the following function definition, the left-hand side has a function `bar` that has 3 arguments and it is parsed correctly:
+
+  ```
+  >>> foo Z,x,y = bar x,y,A;
+  foo(r0, x, y) >< Z =>
+      bar(r0, y, A)~x;
+  ```
+
+  
+
+
+
 ### v0.1.3 (released on 20 Nov 2023)
 
 #### Bug fixes
-- **Parsing**: In function definitions, the parsing fails when given constructor terms have multiple arguments. Now it is fixed.
+- **Parsing**: In function definitions, the parsing failed if given constructor terms had multiple arguments. Now it is fixed. For example, the following function definition whose constructor `Cons` has the multiple arguments `x,xs`  is parsed correctly:
+
+  ```
+  >>> app (Cons x,xs),y = (Cons y,xs),x;
+  app(r0, r1, y) >< Cons(x, xs) =>
+      r0~Cons(y, xs), r1~x;
+  >>>
+  ```
+
+  
 
 
 
