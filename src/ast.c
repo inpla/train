@@ -264,19 +264,35 @@ Ast *ast_paramToCons(Ast *ast) {
 
 
 
-Ast *ast_addLast(Ast *l, Ast *p)
+Ast *ast_addLast(Ast *list, Ast *p)
 {
     Ast *q;
 
     // (NULL, p) => [p]
-    if(l == NULL) return ast_makeAST(AST_LIST,p,NULL);
+    if(list == NULL) return ast_makeAST(AST_LIST,p,NULL);
 
     // ([...], p) = [..., p]
-    q = l;
+    q = list;
     while(q->right != NULL) q = q->right;
     q->right = ast_makeAST(AST_LIST,p,NULL);
-    return l;
+    return list;
 }
+
+
+Ast *ast_appendList(Ast *list, Ast *p)
+{
+    Ast *q;
+
+    // (NULL, [p]) => [p]
+    if(list == NULL) return p;
+
+    // ([...], [p]) = [...] @ [p]
+    q = list;
+    while(q->right != NULL) q = q->right;
+    q->right = p;
+    return list;
+}
+
 
 Ast *ast_getNth(Ast *p,int nth)
 {

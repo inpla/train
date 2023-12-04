@@ -21,8 +21,8 @@
 
 
 
-#define VERSION "0.1.4"
-#define BUILT_DATE  "24 Nov 2023"
+#define VERSION "0.1.5"
+#define BUILT_DATE  "4 Dec 2023"
   
 
  
@@ -1234,15 +1234,22 @@ int compile_term(Ast *sym_list, Ast *body) {
     // and append it to f_param_list
     Ast *sym_list_at = sym_list;
     Ast *params = NULL;
+
+    
+    
     while (sym_list_at != NULL) {
       Ast *elem = sym_list_at->left;
+
       params = ast_addLast(params,
 			   ast_makeAST(AST_NAME, elem, NULL));
-
+      
       if (sym_list_at->right == NULL) {
 	// Append
 	// sym_list_at->right = f_param_list;
-	params->right = f_param_list;
+
+	//	params->right = f_param_list;
+	params = ast_appendList(params, f_param_list);
+	
 
 	/*
 	if (f_param_list != NULL) {
@@ -1260,6 +1267,7 @@ int compile_term(Ast *sym_list, Ast *body) {
       sym_list_at = sym_list_at->right;
     }
 
+    
     /*
     if (f_param_list != NULL) {
       params = ast_addLast(params, f_param_list);
@@ -1318,6 +1326,7 @@ int compile_term(Ast *sym_list, Ast *body) {
     Ast *mainbody = body->right;
     Ast *let_variables = body->left->left;
     Ast *let_mainbody = body->left->right;
+
     
     compile_term(let_variables, let_mainbody);
     printf(", ");

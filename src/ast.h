@@ -43,6 +43,7 @@ Ast *ast_makeInt(long num);
 Ast *ast_makeAST(AST_ID id, Ast *left, Ast *right);
 Ast *ast_makeBundle(Ast *list);
 Ast *ast_addLast(Ast *l, Ast *p);
+Ast *ast_appendList(Ast *l, Ast *p);
 Ast *ast_getNth(Ast *p,int nth);
 Ast *ast_getTail(Ast *p);
 int ast_getLen(Ast *p);

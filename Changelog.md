@@ -1,5 +1,18 @@
 # Change log
 
+### v0.1.5 (released on 4 Dec 2023)
+
+#### Bug fixes
+- **Parsing**: In let expressions, the parsing failed if left-hand side of the equation had more than two variables. Now it is fixed. For example, in the following let expression, the equation has two variables `a`, `b` and it is parsed correctly:
+
+  ```
+  >>> copy (S x) = let a,b = copy x in (S a), (S b);
+  copy(r0, r1) >< S(x) =>
+      r0~S(a), r1~S(b), copy(a, b)~x;
+  ```
+
+
+
 ### v0.1.4 (released on 24 Nov 2023)
 
 #### Bug fixes
