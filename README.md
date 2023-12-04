@@ -75,7 +75,7 @@ e ::= x
 This is a constructor system where, in function applications, pattern matching takes place only on the first argument. An *n*-arguments function `f` with *m*-arguments constructor `C` is defined as follows:
 
 ```
-f (C x1,...,xn), y1,...,ym = e1,...,ek
+f (C x1,...,xn), y1,...,ym = e1,...,ek;
 
     where
     - x1,...,xn, y1,...,ym are distinct variables,
@@ -101,7 +101,8 @@ The following is an example of addition on unary numbers:
 
 
 
-- **Example**: Duplication of unaray numbers:
+- **Example**: Duplication of unary numbers:
+  
   ```
   >>> dup Z = Z,Z;
   dup(r0, r1) >< Z =>
@@ -112,7 +113,7 @@ The following is an example of addition on unary numbers:
   >>>
   ```
 
-#### Extantions:
+#### Extentions:
 - **With inpla notation**: We can contain inpla notation by using braces `{` and `}`:
   
   ```
@@ -124,6 +125,7 @@ The following is an example of addition on unary numbers:
   ```
 
 - **Attributes**: We can attach attributes (integer numbers) to functions and constructors by using dot `.`. In the right hand side, we can also attach arithmetic expressions on attributes:
+  
   ```
   >>> inc Int.x = Int.(x+1);
   inc(r0) >< Int(int x) =>
@@ -135,7 +137,7 @@ The following is an example of addition on unary numbers:
   add2(r0, int x) >< Int(int y) =>
       r0~Int(x+y);
   ```
-
+  
 - **Conditional branches**: `if-then-else` is available on the attributes:
   
   ```
