@@ -1,6 +1,6 @@
 # Train
 
-Translator of the new language of interaction nets. 
+Translator of a functional language to interaction nets. 
 
 - The current version is 0.1.5, released on **4 Dec 2023**. (See [Changelog.md](https://github.com/sintan310/train/blob/main/Changelog.md) for details.)
 
@@ -45,8 +45,47 @@ Translator of the new language of interaction nets.
       inc(w0)~x, r0~S(w0);
   >>>
   ```
-  
-  
+
+* To quit this system, use `:q` or  `:quit` command:
+
+  ```
+  >>> :q
+  ```
+
+
+
+## Syntax
+
+The expression `e` is defined as follows:
+
+```
+e ::= x 
+    | C e1,...,en 
+    | f e1,...,em
+    | let x1,...,xj = f e1,...,em in e1',...,ek'
+    | (e1)
+    
+    where 
+     - x,x1, ..., xj are distinct variables,
+     - C is a constructor with n-arguments,
+     - f is a function with m-arguments,
+     - e1,...,ei and e1',...,ei' are expressions.
+```
+
+This is a constructor system where, in function applications, pattern matching takes place only on the first argument. An *n*-arguments function `f` with *m*-arguments constructor `C` is defined as follows:
+
+```
+f (C x1,...,xn), y1,...,ym = e1,...,ek
+
+    where
+    - x1,...,xn, y1,...,ym are distinct variables,
+    - e1,...,ek are expressions,
+    - the variable x1,...,xn, y1,...,ym 
+      must occur once in e1,...ek.    
+```
+
+The following is an example of addition on unary numbers:
+
   ```
   >>> add Z,x = x;
   add(r0, x) >< Z =>
@@ -59,6 +98,10 @@ Translator of the new language of interaction nets.
       add(r0, S(y))~x;
   >>>
   ```
+
+
+
+- **Example**: Duplication of unaray numbers:
   ```
   >>> dup Z = Z,Z;
   dup(r0, r1) >< Z =>
@@ -68,6 +111,10 @@ Translator of the new language of interaction nets.
       r0~S(w1), r1~S(w2), dup(w1, w2)~x;
   >>>
   ```
+
+#### Extantions:
+- **With inpla notation**: We can contain inpla notation by using braces `{` and `}`:
+  
   ```
   >>> dup Z = a,b { Dup(a,b)~Z };
   dup(r0, r1) >< Z =>
@@ -75,6 +122,8 @@ Translator of the new language of interaction nets.
        Dup(a,b)~Z ;
   >>>
   ```
+
+- **Attributes**: We can attach attributes (integer numbers) to functions and constructors by using dot `.`. In the right hand side, we can also attach arithmetic expressions on attributes:
   ```
   >>> inc Int.x = Int.(x+1);
   inc(r0) >< Int(int x) =>
@@ -86,24 +135,21 @@ Translator of the new language of interaction nets.
   add2(r0, int x) >< Int(int y) =>
       r0~Int(x+y);
   ```
+
+- **Conditional branches**: `if-then-else` is available on the attributes:
+  
   ```
   >>> foo Int.x = if x==1 then Int.x+1 else if x==2 then Int.x+10 else Int.x+100;
   foo(r0) >< Int(int x) =>
       if x==1 then r0~Int(x+1) else if x==2 then r0~Int(x+10) else r0~Int(x+100);
   >>>
   ```
-  
-* To quit this system, use `:q` or  `:quit` command:
-
-  ```
-  >>> :q
-  ```
 
 
 
-### Sample
+### Sample programs
 
-- Fibonacci number
+- Fibonacci number on unary numbers:
 
   ```
   -- definitions
@@ -118,7 +164,7 @@ Translator of the new language of interaction nets.
   main = fib (S(S(S(S(S(S Z)))))); -- should be 8 because 0 1 1 2 3 5 8
   ```
 
-- GCD
+- GCD on attributes
 
   ```
   (* Sample in Python
@@ -137,8 +183,6 @@ Translator of the new language of interaction nets.
   ```
   
   
-
-
 
 ## Limitation
 
