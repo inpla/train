@@ -72,7 +72,7 @@ e ::= x
      - e1,...,ei and e1',...,ei' are expressions.
 ```
 
-This is a constructor system where, in function applications, pattern matching takes place only on the first argument. An *n*-arguments function `f` with *m*-arguments constructor `C` is defined as follows:
+This is a constructor system where, in function applications, pattern matching takes place only on the first argument. A *(m+1)*-arguments function `f` with *n*-arguments constructor `C` is defined as follows:
 
 ```
 f (C x1,...,xn), y1,...,ym = e1,...,ek;
@@ -80,7 +80,7 @@ f (C x1,...,xn), y1,...,ym = e1,...,ek;
     where
     - x1,...,xn, y1,...,ym are distinct variables,
     - e1,...,ek are expressions,
-    - the variable x1,...,xn, y1,...,ym 
+    - each variable x1,...,xn, y1,...,ym 
       must occur once in e1,...ek.    
 ```
 
