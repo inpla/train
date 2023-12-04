@@ -84,6 +84,8 @@ f (C x1,...,xn), y1,...,ym = e1,...,ek;
       must occur once in e1,...ek.    
 ```
 
+- **Constructors and functions:** Strings starting with a capital letter, such as `S`, `Z`, `Cons`, `Nil` are recognised as **constructors**. For **functions**, use strings that start with a lower case letter, such as `foo`, `inc`,  `add`, `dup`.
+
 The following is an example of addition on unary numbers:
 
   ```
