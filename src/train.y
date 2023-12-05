@@ -21,8 +21,8 @@
 
 
 
-#define VERSION "0.1.5"
-#define BUILT_DATE  "4 Dec 2023"
+#define VERSION "0.1.6"
+#define BUILT_DATE  "5 Dec 2023"
   
 
  
@@ -466,7 +466,6 @@ term_agent
 {  
   $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), $2);
 }
-| term_atom
 
 //
 // with attr_expr
@@ -505,6 +504,8 @@ term_agent
     $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), newlist);
   }
 }
+
+| term_atom
 ;
 
 
@@ -521,7 +522,10 @@ agent_list
 { 
   $$ = ast_addLast($1, $3);
 }
+//| LP agent_list RP { $$ = $2; }
+
 //
+/*
 // (term) , atom
 | LP term_agent RP COMMA agent_list_atom
 {
@@ -539,6 +543,7 @@ agent_list
 {
   $$ = ast_makeList2($2, $6);
 }
+*/
 ;
 
 
@@ -560,6 +565,8 @@ agent_list_atom
 { 
   $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), $2);
 }
+| LP term_let RP { $$ = $2; }
+
 ;
 
 
@@ -571,7 +578,8 @@ agent_list_atom
 
 term_atom
 : 
-LP term_agent RP { $$ = $2; }
+//LP term_agent RP { $$ = $2; }
+LP term_let RP { $$ = $2; }
 ;
 
 

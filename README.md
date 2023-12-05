@@ -2,7 +2,7 @@
 
 Translator of a functional language to interaction nets. 
 
-- The current version is 0.1.5, released on **4 Dec 2023**. (See [Changelog.md](https://github.com/sintan310/train/blob/main/Changelog.md) for details.)
+- The current version is 0.1.6, released on **5 Dec 2023**. (See [Changelog.md](https://github.com/sintan310/train/blob/main/Changelog.md) for details.)
 
 
 
@@ -101,10 +101,37 @@ The following is an example of addition on unary numbers:
   >>>
   ```
 
+- **Main program**: The main program is written by the following way:
 
-
-- **Example**: Duplication of unary numbers:
+  ```
+  main = e1,...,ek;
   
+      where e1,...ek are expressions
+  ```
+
+  For instance, the following is a program set of the addition (where `--` is a comment)
+
+  ```
+  -- rules
+  add Z,x = x;
+  add (S x),y = S (add x,y);
+  
+  -- main
+  main = add (S (S (S Z))), (S Z);
+  ```
+
+
+#### Extentions:
+- **With inpla notation** (Duplication of unary numbers): We can contain inpla notation by using braces `{` and `}`:
+  
+  ```
+  >>> dup Z = a,b { Dup(a,b)~Z };
+  dup(r0, r1) >< Z =>
+      r0~a, r1~b,
+       Dup(a,b)~Z ;
+  >>>
+  ```
+  Of course, this example can be written without the extension:  
   ```
   >>> dup Z = Z,Z;
   dup(r0, r1) >< Z =>
@@ -112,17 +139,6 @@ The following is an example of addition on unary numbers:
   >>> dup (S x) = let w1,w2 = dup x in (S w1), (S w2);
   dup(r0, r1) >< S(x) =>
       r0~S(w1), r1~S(w2), dup(w1, w2)~x;
-  >>>
-  ```
-
-#### Extentions:
-- **With inpla notation**: We can contain inpla notation by using braces `{` and `}`:
-  
-  ```
-  >>> dup Z = a,b { Dup(a,b)~Z };
-  dup(r0, r1) >< Z =>
-      r0~a, r1~b,
-       Dup(a,b)~Z ;
   >>>
   ```
 

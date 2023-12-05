@@ -1,5 +1,21 @@
 # Change log
 
+### v0.1.6 (released on 4 Dec 2023)
+
+#### Bug fixed
+- **Parsing**: We could not use brackets in nested let expressions. Now this is fixed.
+
+  ```
+  >>> main = let x = y in (let w=x in w);
+    x~y, w~x, r0~w;
+    r0;
+  >>> 
+  ```
+
+  
+
+
+
 ### v0.1.5 (released on 4 Dec 2023)
 
 #### Bug fixes
