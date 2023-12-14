@@ -1,5 +1,11 @@
 # Change log
 
+### v0.1.7 (released on 14 Dec 2023)
+
+#### Bug fixed
+- **Parsing**: We could not get arities of return bundles when using if-then-else sentences. Now, it can be done with one-depth parsing, although this is only an ad hoc solution. Recursive parsing will be done in the later version.
+
+
 ### v0.1.6 (released on 4 Dec 2023)
 
 #### Bug fixed

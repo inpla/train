@@ -1459,6 +1459,12 @@ int compile_rule(Ast *at) {
 
     ast_lookupConst(body->left->sym, &bundle_arity);    
     
+  } else if (body->id == AST_IF) {
+    ast_lookupConst(func_sym, &bundle_arity);
+    //    printf("%s:%d\n", func_sym, bundle_arity);
+
+    // Warning:
+    
   }
 
   
