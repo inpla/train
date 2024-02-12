@@ -21,8 +21,8 @@
 
 
 
-#define VERSION "0.1.7"
-#define BUILT_DATE  "14 Dec 2023"
+#define VERSION "0.1.8 (secret)"
+#define BUILT_DATE  "11 Feb 2024"
   
 
  
@@ -44,7 +44,7 @@ extern FILE *yyin;
 extern int yylex();
 int yyerror();
 #define YY_NO_INPUT
-extern int yylineno;
+extern int yylineno, yycolumn;
 
  
 // For error message when nested source files are specified.
@@ -63,8 +63,8 @@ void InfoLineno_Push(char *fname, int lineno) {
   InfoLinenoType *aInfo;
   aInfo = (InfoLinenoType *)malloc(sizeof(InfoLinenoType));
   if (aInfo == NULL) {
-    printf("[InfoLineno]Malloc error\n");
-    exit(-1);
+    fprintf(stdout, "[InfoLineno]Malloc error\n");
+    exit(1);
   }
   aInfo->next = InfoLineno;
   aInfo->yylineno = lineno+1;
@@ -114,15 +114,11 @@ static char *Errormsg = NULL;
 %token <chval> NAME AGENT ALPHA_NUMERAL
 %token <longval> INT_LITERAL
 %token <chval> STRING_LITERAL
-%token LP RP LB RB COMMA
-%token COLON DOT
-%token TO CNCT
-%token DELIMITER 
+%token COLON
 
 %token ANNOTATE_L ANNOTATE_R
 
-%token PIPE CR
-%token NOT AND OR LD EQUAL NE GT GE LT LE
+%token NOT AND EQ OR NE GT GE LT LE
 %token ADD SUB MUL DIV MOD INT LET IN IF THEN ELSE ANY WHERE
 %token END_OF_FILE USE MAIN
 
@@ -135,7 +131,7 @@ fundef_constr
 
 attr_declaration
 attr_name
-attr_name_list
+attr_name_sequence
 
 body
 
@@ -143,18 +139,18 @@ if_sentence if_compound
 
 term
 term_let
+term_opcons
+term_mklist
 term_agent
 term_atom
 
-agent_list
-agent_list_atom
 
-
-name_list
+name_sequence
+term_sequence_twomore
 
 attr_expr
 attr_expr_body
-attr_expr_list
+attr_expr_sequence
 
 expr additive_expr equational_expr logical_expr relational_expr unary_expr
 multiplicative_expr primary_expr
@@ -162,34 +158,37 @@ multiplicative_expr primary_expr
 
 
 
- //%type <chval> term_symbol
+//%type <chval> term_symbol
 
 
-%nonassoc REDUCE
- //%nonassoc RP
+ // %right COLON
+
+
+// For error message information
+%define parse.error verbose
+%locations
 
 
 
-%right COLON
 
 %%
 s     
-: error DELIMITER { 
+: error ';' { 
   yyclearin;
   yyerrok; 
   puts(Errormsg);
   free(Errormsg);
   ast_heapReInit();
-  if (yyin == stdin) yylineno=0;
+  if (yyin == stdin) yylineno=0; yycolumn=1;
   //  YYACCEPT;
   YYABORT;
 }
-| DELIMITER { 
-  if (yyin == stdin) yylineno=0;
+| ';' { 
+  if (yyin == stdin) yylineno=0; yycolumn=1;
   YYACCEPT;
 }
 
-| fundef DELIMITER
+| fundef ';'
 {
   exec($1);
 
@@ -197,12 +196,11 @@ s
   fflush(stdout);
   
   ast_heapReInit(); 
-  if (yyin == stdin) yylineno=0;
+  if (yyin == stdin) yylineno=0; yycolumn=1;
   YYACCEPT;
 }
 
-| fundef STRING_LITERAL DELIMITER
-//| fundef COMMA STRING_LITERAL DELIMITER
+| fundef STRING_LITERAL ';'
 {
   exec($1);
 
@@ -211,22 +209,22 @@ s
   fflush(stdout);
   
   ast_heapReInit(); 
-  if (yyin == stdin) yylineno=0;
+  if (yyin == stdin) yylineno=0; yycolumn=1;
   YYACCEPT;
 }
 
 
 | STRING_LITERAL
 {
-  printf("%s\n", $1);
+  printf("%s;\n", $1);
   fflush(stdout);
   
   ast_heapReInit(); 
-  if (yyin == stdin) yylineno=0;
+  if (yyin == stdin) yylineno=0; yycolumn=1;
   YYACCEPT;
 }
 
-| body DELIMITER
+| body ';'
 {
   exec($1);
 
@@ -234,7 +232,7 @@ s
   fflush(stdout);
   
   ast_heapReInit(); 
-  if (yyin == stdin) yylineno=0;
+  if (yyin == stdin) yylineno=0; yycolumn=1;
   YYACCEPT;
 }
 
@@ -242,7 +240,7 @@ s
 
 
 | command {
-  if (yyin == stdin) yylineno=0;
+  if (yyin == stdin) yylineno=0; yycolumn=1;
   YYACCEPT;
 }
 ;
@@ -250,7 +248,7 @@ s
 
 
 command
-: COLON NAME
+: ':' NAME
 {
   if (!(strcmp($2, "quit"))) {
     destroy(); exit(0);
@@ -259,14 +257,18 @@ command
     destroy(); exit(0);    
 
   } else {
-    printf("ERROR: No operation for the given command.");
+    fprintf(stderr, "ERROR: No operation for the given command.");
   }
 }
-  
+| ':' USE
+{
+  printf("USE\n");
+}
+
 | error END_OF_FILE {}
 | END_OF_FILE {
   if (!popFP()) {
-    destroy(); exit(-1);
+    destroy(); exit(1);
   }
 #ifdef MY_YYLINENO
   yylineno = InfoLineno->yylineno;
@@ -287,34 +289,36 @@ command
 
 
 fundef
-: NAME fundef_constr LD fundef_body
+: NAME fundef_constr '=' fundef_body
 { $$ = ast_makeAST(AST_RULE,
 		   ast_makeCons(ast_makeSymbol($1),
 				ast_makeCons($2, NULL)),
 		   $4);
 }
 //
-| NAME fundef_constr COMMA name_list LD fundef_body
+| NAME '(' fundef_constr ',' name_sequence ')' '=' fundef_body
 { $$ = ast_makeAST(AST_RULE,
 		   ast_makeCons(ast_makeSymbol($1),
-				ast_makeCons($2, $4)),
-		   $6);
+				ast_makeCons($3, $5)),
+		   $8);
 
 }
 //
-| NAME attr_declaration fundef_constr LD fundef_body
+// attributes
+//
+| NAME attr_declaration fundef_constr '=' fundef_body
 { $$ = ast_makeAST(AST_RULE,
 		   ast_makeCons(ast_makeSymbol($1),
 				ast_makeCons($3, $2)),
 		   $5);
 }
 //
-| NAME attr_declaration fundef_constr COMMA name_list LD fundef_body
+| NAME attr_declaration '(' fundef_constr ',' name_sequence ')' '=' fundef_body
 { $$ = ast_makeAST(AST_RULE,
 		   ast_makeCons(ast_makeSymbol($1),
-				ast_makeCons($3,
-					     ast_addLast($2,$5))),
-		   $7);
+				ast_makeCons($4,
+					     ast_addLast($2,$6))),
+		   $9);
 }
 ;
 
@@ -327,58 +331,52 @@ fundef_constr
 : AGENT 
 { $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), NULL); }
 //
-// ex. (Z)
-| LP AGENT RP
-{ $$=ast_makeAST(AST_AGENT, ast_makeSymbol($2), NULL); }
-//
-/*
-| LP AGENT agent_list_atom RP
+// ex2. S x
+| AGENT NAME 
 { $$=ast_makeAST(AST_AGENT,
-		 ast_makeSymbol($2),
-		 ast_makeList1($3)); }
-//
-| LP AGENT agent_list_atom COMMA agent_list RP
-{ $$=ast_makeAST(AST_AGENT,
-		 ast_makeSymbol($2),
-		 ast_makeCons($3, $5));
-}
-*/
+		 ast_makeSymbol($1),
+		 ast_makeList1(ast_makeSymbol($2))); }
 
-// ex. (S x)  (S x,y)
-| LP AGENT name_list RP
+// ex3. S(x,y,...)
+| AGENT '(' name_sequence ')'
 { $$=ast_makeAST(AST_AGENT,
-		 ast_makeSymbol($2),
+		 ast_makeSymbol($1),
 		 $3); }
 
+// ex4. x:y
+| NAME ':' NAME
+{ $$=ast_makeAST(AST_OPCONS, NULL,
+		 ast_makeList2(
+			       ast_makeSymbol($1),
+			       ast_makeSymbol($3)));
+}
+
+// ex5. []
+| '[' ']'
+{ $$=ast_makeAST(AST_NIL, NULL, NULL);
+}
+
+
+
 //
 //
+// attribute
 | AGENT attr_declaration
 { $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), $2); }
 //
-| LP AGENT attr_declaration RP
+/*
+| '(' AGENT attr_declaration ')'
 { $$=ast_makeAST(AST_AGENT, ast_makeSymbol($2), $3); }
 //
-/*
-| LP AGENT attr_declaration agent_list_atom agent_list RP
+| '(' AGENT attr_declaration name_sequence ')'
 { $$=ast_makeAST(AST_AGENT,
 		 ast_makeSymbol($2),
 		 ast_addLast($3,$4)); }
-//
-| LP AGENT attr_declaration agent_list_atom COMMA agent_list RP
-{
-  Ast *terms = $6;
-  if (terms != NULL) {
-    terms = ast_makeCons($4, terms);
-  }
-  $$=ast_makeAST(AST_AGENT,
-		 ast_makeSymbol($2),
-		 ast_addLast($3,terms));
-}
 */
-| LP AGENT attr_declaration name_list RP
-{ $$=ast_makeAST(AST_AGENT,
-		 ast_makeSymbol($2),
-		 ast_addLast($3,$4)); }
+//
+//
+| '(' fundef_constr ')'
+{ $$ = $2; }
 
 ;
 
@@ -394,8 +392,8 @@ fundef_body
 
 
 attr_declaration
-: DOT attr_name { $$ = ast_makeList1($2); }
-| DOT LP attr_name_list RP { $$ = $3; }
+: '.' attr_name { $$ = ast_makeList1($2); }
+| '.' '(' attr_name_sequence ')' { $$ = $3; }
 ;
 
 
@@ -403,9 +401,9 @@ attr_name
 : NAME { $$ = ast_makeAST(AST_INTVAR, ast_makeSymbol($1), NULL); }
 ;
 
-attr_name_list
+attr_name_sequence
 : attr_name { $$ = ast_makeList1($1); }
-| attr_name_list COMMA attr_name { $$ = ast_addLast($1, $3); }
+| attr_name_sequence ',' attr_name { $$ = ast_addLast($1, $3); }
 ;
 
 
@@ -413,8 +411,8 @@ attr_name_list
 
 body
 // (AST_BODY term NULL)
-: MAIN LD term  { $$ = ast_makeAST(AST_BODY, $3, NULL); }
-| LET LP RP LD term
+: MAIN '=' term  { $$ = ast_makeAST(AST_BODY, $3, NULL); }
+| LET '(' ')' '=' term
 {
   $$ = ast_makeAST(AST_BODY, $5, NULL);
 }
@@ -424,20 +422,34 @@ body
 
 
 term
-: term_let
-| agent_list  // e1, e2 => (LIST e1 (LIST e2 NULL))
+: '(' term_sequence_twomore ')'  // e1, e2 => (LIST e1 (LIST e2 NULL))
+{ $$ = $2; }
+| term_let
 ;
+
 
 term_let
 //(LET (LD (SYM_LIST x1 x2 x3) TERM) TERM)
-: LET name_list LD term IN term
+: LET NAME '=' term IN term
 { $$ = ast_makeAST(AST_LET,
-		   ast_makeAST(AST_LD, $2, $4),
+		   ast_makeAST(AST_LD, ast_makeList1(ast_makeSymbol($2)), $4),
 		   $6);
+}
+| LET '(' name_sequence ')' '=' term IN term
+{ $$ = ast_makeAST(AST_LET,
+		   ast_makeAST(AST_LD, $3, $6),
+		   $8);
+}
+| term_opcons
+;
+
+term_opcons
+: term_agent ':' term
+{
+  $$ = ast_makeAST(AST_OPCONS, NULL, ast_makeList2($1, $3));
 }
 | term_agent
 ;
-
 
 
 
@@ -447,12 +459,13 @@ term_agent
   $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), NULL);
 }
 | AGENT term_agent
+
 {  
   $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), ast_makeList1($2));
 }
-| AGENT agent_list
+| AGENT '(' term_sequence_twomore ')'
 {  
-  $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), $2);
+  $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), $3);
 }
 | NAME
 { 
@@ -462,9 +475,9 @@ term_agent
 {  
   $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), ast_makeList1($2));
 }
-| NAME agent_list
+| NAME '(' term_sequence_twomore ')'
 {  
-  $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), $2);
+  $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), $3);
 }
 
 //
@@ -477,9 +490,9 @@ term_agent
 {
   $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), ast_addLast($2,$3));
 }
-| AGENT attr_expr agent_list
+| AGENT attr_expr '(' term_sequence_twomore ')'
 {
-  $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), ast_addLast($2,$3));
+  $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), ast_addLast($2,$4));
 }
 | NAME attr_expr
 {
@@ -490,13 +503,13 @@ term_agent
   // NAME attr t1  ==> NAME [t1, attr]
   $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), ast_makeCons($3, $2));
 }
-| NAME attr_expr agent_list
+| NAME attr_expr '(' term_sequence_twomore ')'
 {
   // NAME attr [t1,t2,...]  ==> NAME [t1, attr, t2, ...]
   // This is because t1 must be the constructor for NAME.
   { Ast *t1, *t2, *newlist;
-    t1 = $3->left;
-    t2 = $3->right;
+    t1 = $4->left;
+    t2 = $4->right;
     newlist = ast_makeCons($2, t2);
     newlist = ast_makeCons(t1, newlist);
   
@@ -504,73 +517,26 @@ term_agent
     $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), newlist);
   }
 }
+| term_mklist
+;
 
+
+
+
+term_mklist
+: '[' ']' { $$ = ast_makeAST(AST_NIL, NULL, NULL); }
+| '[' term ']'
+{ $$ = ast_makeAST(AST_MKLIST,
+		   NULL,
+		   ast_paramToCons(ast_makeList1($2)));
+}
+| '[' term_sequence_twomore ']'
+{ $$ = ast_makeAST(AST_MKLIST,
+		   NULL,
+		   ast_paramToCons($2));
+}
 | term_atom
 ;
-
-
-
-agent_list
-// atom , atom
-: agent_list_atom COMMA agent_list_atom
-{ 
-  $$ = ast_makeList2($1, $3);
-}
-//
-// agent_list , atom
-| agent_list COMMA agent_list_atom
-{ 
-  $$ = ast_addLast($1, $3);
-}
-//| LP agent_list RP { $$ = $2; }
-
-//
-/*
-// (term) , atom
-| LP term_agent RP COMMA agent_list_atom
-{
-  $$ = ast_makeList2($2, $5);
-}
-//
-// atom , (term)
-| agent_list_atom COMMA LP term_agent RP
-{
-  $$ = ast_makeList2($1, $4);
-}
-//
-// (term), (term)
-| LP term_agent RP COMMA LP term_agent RP
-{
-  $$ = ast_makeList2($2, $6);
-}
-*/
-;
-
-
-
-agent_list_atom
-: AGENT
-{ 
-  $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), NULL);
-}
-| NAME
-{ 
-  $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), NULL);
-}
-| AGENT attr_expr
-{ 
-  $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), $2);
-}
-| NAME attr_expr
-{ 
-  $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), $2);
-}
-| LP term_let RP { $$ = $2; }
-
-;
-
-
-
 
 
 
@@ -578,22 +544,20 @@ agent_list_atom
 
 term_atom
 : 
-//LP term_agent RP { $$ = $2; }
-LP term_let RP { $$ = $2; }
+'(' term ')' { $$ = $2; }
 ;
 
 
+term_sequence_twomore
+: term ',' term { $$=ast_makeList2($1, $3); }
+| term_sequence_twomore ',' term
+{ $$= ast_addLast($1, $3);
+}
+;
 
-
-
-
-
-
-
-
-name_list
+name_sequence
 : NAME { $$=ast_makeList1(ast_makeSymbol($1)); }
-| name_list COMMA NAME
+| name_sequence ',' NAME
 { $$= ast_addLast($1, ast_makeSymbol($3));
 }
 ;
@@ -603,17 +567,17 @@ name_list
 
 
 attr_expr
-: DOT attr_expr_body { $$ = $2; }
+: '.' attr_expr_body { $$ = $2; }
 ;
 
 attr_expr_body
 : expr { $$ = ast_makeList1($1); }
-| LP expr COMMA attr_expr_list RP { $$ = ast_makeCons($2,$4); }
+| '(' expr ',' attr_expr_sequence ')' { $$ = ast_makeCons($2,$4); }
 ;
 
-attr_expr_list
+attr_expr_sequence
 : expr { $$ = ast_makeList1($1); }
-| attr_expr_list COMMA expr { $$ = ast_addLast($1, $3); }
+| attr_expr_sequence ',' expr { $$ = ast_addLast($1, $3); }
 ;
 
 
@@ -623,7 +587,7 @@ expr
 
 equational_expr
 : logical_expr
-| equational_expr EQUAL logical_expr { $$ = ast_makeAST(AST_EQ, $1, $3); }
+| equational_expr EQ logical_expr { $$ = ast_makeAST(AST_EQ, $1, $3); }
 | equational_expr NE logical_expr { $$ = ast_makeAST(AST_NE, $1, $3); }
 
 logical_expr
@@ -663,7 +627,7 @@ primary_expr
 :NAME {$$=ast_makeAST(AST_NAME, ast_makeSymbol($1), NULL);}
 | INT_LITERAL { $$ = ast_makeInt($1); }
 //| AGENT { $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), NULL); }
-| LP expr RP { $$ = $2; }
+| '(' expr ')' { $$ = $2; }
 ;
 
 
@@ -699,13 +663,14 @@ int yyerror(char *s) {
   extern char *yytext;
   char msg[256];
 
+  
 #ifdef MY_YYLINENO
   if (InfoLineno != NULL) {
-    sprintf(msg, "%s:%d: %s near token `%s'.\n", 
-	  InfoLineno->fname, yylineno+1, s, yytext);
+    sprintf(msg, "%s:%d:%d: %s near token `%s'.\n", 
+	    InfoLineno->fname, yylineno+1, yycolumn, s, yytext);
   } else {
-    sprintf(msg, "%d: %s near token `%s'.\n", 
-	  yylineno, s, yytext);
+    sprintf(msg, "%d:%d: %s near token `%s'.\n", 
+	    yylineno, yycolumn, s, yytext);
   }
 #else
   sprintf(msg, "%d: %s near token `%s'.\n", yylineno, s, yytext);
@@ -714,9 +679,9 @@ int yyerror(char *s) {
   Errormsg = strdup(msg);  
 
   if (yyin != stdin) {
-    //        puts(Errormsg);
+    fputs(Errormsg, stderr);
     destroy(); 
-    //        exit(0);
+    exit(0);
   }
 
   return 0;
@@ -736,6 +701,10 @@ int yyerror(char *s) {
 // -------------------------------------------------
 // Management of fresh names
 // -------------------------------------------------
+
+
+// TODO: The table can be deleted in future...
+
 
 int FreshName_rnum = 0;
 int FreshName_wnum = 0;
@@ -789,9 +758,10 @@ char* FreshName_new(char *suffix, int *counter) {
 
     *counter = *counter + 1;
 
-    if (ast_lookupSymTable(buf) == -1) {
+    if (ast_lookupSymTable(buf) == -1) {      
       break;
     }
+
     
   }
 
@@ -958,7 +928,6 @@ void puts_expr_from_ast_atom(Ast *p) {
   }	   
 }
 
-
  
 void puts_term_from_ast(Ast *p) {
   switch (p->id) {
@@ -973,11 +942,50 @@ void puts_term_from_ast(Ast *p) {
     break;
 
 
-    /*
-  case AST_APP:
-    puts("APP-APP");
+  case AST_NIL: {
+    printf("[]");
     break;
-    */
+  }
+    
+  case AST_MKLIST:{
+    printf("[");
+
+    Ast *ast_list = p->right;
+    while (ast_list != NULL) {
+      Ast *hd = ast_list->left;
+      puts_term_from_ast(hd);
+
+      if ((ast_list->right == NULL)
+	  || (ast_list->right->id == AST_NIL)) {
+	break;
+      }
+      ast_list = ast_list->right;
+      printf(", ");
+      
+    }
+
+    
+    printf("]");
+    break;
+  }
+
+
+  case AST_OPCONS:{
+
+    Ast *ast_list = p->right;
+
+    Ast *hd = ast_list->left;
+
+    puts_term_from_ast(hd);
+    printf(":");
+    hd = ast_list->right->left;    
+    puts_term_from_ast(hd);
+
+          
+    break;
+  }
+
+
     
   case AST_AGENT: {
     
@@ -1077,6 +1085,20 @@ void puts_term_from_ast(Ast *p) {
   }
 }
 
+
+void puts_main_symlist(Ast *p) {
+  Ast *param_list = p;
+    
+  while (param_list != NULL) {
+    puts_term_from_ast(param_list->left);
+    param_list = param_list->right;
+    if (param_list == NULL) {
+      break;
+    }
+    printf(" ");
+  }
+  
+}
 
 
 
@@ -1182,6 +1204,10 @@ int compile_term(Ast *sym_list, Ast *body) {
   //  ast_puts(body); puts("");
   
   switch (body->id) {
+
+  case AST_NIL:
+  case AST_MKLIST:
+  case AST_OPCONS:
   case AST_AGENT: {
 
     compile_nested_params(body);
@@ -1379,6 +1405,7 @@ int compile_term(Ast *sym_list, Ast *body) {
     
     break;
   }
+
 
     
   default:
@@ -1592,6 +1619,15 @@ int compile_rule(Ast *at) {
     compile_term(sym_list, body);
     break;
   }
+
+  case AST_NIL:
+  case AST_MKLIST:
+  case AST_OPCONS: {    
+    compile_term(sym_list, body);
+    break;
+  }
+
+
     
   default:
     puts("???");
@@ -1636,13 +1672,18 @@ int compile(Ast *ast) {
     // According to the bundle arity,
     // a fresh sym list is built.
     Ast *sym_list = NULL;
-    for (int i=0; i<bundle_arity; i++) {
-      sym_list = ast_addLast(sym_list, ast_makeSymbol(FreshName_new_r()));
+    if (bundle_arity == 1) {
+      sym_list = ast_makeList1(ast_makeSymbol("main"));
+    } else {
+      for (int i=0; i<bundle_arity; i++) {
+	sym_list = ast_addLast(sym_list, ast_makeSymbol(FreshName_new_r()));
+      }
     }
     
     compile_term(sym_list, ast->left);
     puts(";");
-    puts_term_from_ast(sym_list);
+    //puts_term_from_ast(sym_list);
+    puts_main_symlist(sym_list);
         
     break;
   }
@@ -1653,7 +1694,7 @@ int compile(Ast *ast) {
 
     
   default:
-    puts("ERROR: No matching ID in compile");
+    fprintf(stderr, "ERROR: No matching ID in compile.\n");
     exit(1);
   }
 
@@ -1671,11 +1712,11 @@ int exec(Ast *at) {
   ast_puts(at); puts("");
 #endif
 
+  compile(at);
 
   FreshName_reInit();
   
 
-  compile(at);
     
     
   
@@ -1697,7 +1738,8 @@ int yywrap() {
 
 
 int main(int argc, char *argv[])
-{ 
+{
+  char *fname = NULL;
   int retrieve_flag = 1; // 1: retrieve to interpreter even if error occurs
 
 
@@ -1707,13 +1749,45 @@ int main(int argc, char *argv[])
     if (*argv[i] == '-') {
       switch (*(argv[i] +1)) {
       case 'v':
-	printf("Version %s (%s)\n", VERSION, BUILT_DATE);
-	exit(-1);
+	fprintf(stderr, "Version %s (%s)\n", VERSION, BUILT_DATE);
+	exit(0);
 	break;
+
+      case 'f':
+	i++;
+	if (i < argc) {
+	  fname = argv[i];
+	  retrieve_flag = 0;
+	} else {
+	  fprintf(stderr, "ERROR: The option `-f' needs a string of an input file name.\n");
+	  exit(1);
+	}
+	break;
+	
       }
     }
   }
-	
+
+
+  // input file source
+  if (fname == NULL) {
+    yyin = stdin;
+    
+  } else {
+    if (!(yyin = fopen(fname, "r"))) {
+      
+      char *fname_source = malloc(sizeof(char*) * 256);
+      snprintf(fname_source, 256, "%s", fname);
+      if (!(yyin = fopen(fname_source, "r"))) {
+	fprintf(stderr, "Error: The file `%s' cannot be opened.\n", fname);
+	exit(1);
+      }
+      
+      free(fname_source);
+    }
+  }
+  
+  
 	
 #ifdef MY_YYLINENO
   InfoLineno_Init();

@@ -19,7 +19,7 @@ typedef enum {
   AST_LT, AST_LE, AST_EQ, AST_NE, AST_UNM, AST_AND, AST_OR, AST_NOT, 
 
   // for built-in lists
-  AST_OPCONS, AST_NIL,
+  AST_OPCONS, AST_MKLIST, AST_NIL,
 
   // for built-in agents  
   AST_RAND, AST_SRAND,

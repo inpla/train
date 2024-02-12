@@ -69,23 +69,22 @@ char *Parse_closeStringBuffer() {
 
 
 
+// https://stackoverflow.com/questions/26854374/how-do-i-use-yy-bs-lineno-and-yy-bs-column-in-flex
+int yycolumn = 1;
+#define YY_USER_ACTION \
+  yylloc.first_line = yylloc.last_line = yylineno; \
+  yylloc.first_column = yycolumn; \
+  yylloc.last_column = yycolumn + yyleng - 1; \
+  yycolumn += yyleng; \
+  //yylval.str = strdup(yytext);
+
 %}
 
 %option nounput
-%option yylineno
 %option noyywrap
+%option yylineno
 %x STRING_STATE COM_STATE
 %%
-<INITIAL>";" return (DELIMITER);
-<INITIAL>":" return (COLON);
-<INITIAL>"." return (DOT);
-<INITIAL>"(" return (LP);
-<INITIAL>")" return (RP);
-<INITIAL>"[" return LB;
-<INITIAL>"]" return RB;
-<INITIAL>"," return (COMMA);
-<INITIAL>"=>" return (TO);
-<INITIAL>"~" return (CNCT);
 <INITIAL>"-" return (SUB);
 <INITIAL>"&&" return(AND);
 <INITIAL>"and" return(AND);
@@ -93,9 +92,7 @@ char *Parse_closeStringBuffer() {
 <INITIAL>"or" return(OR);
 <INITIAL>"!" return(NOT);
 <INITIAL>"not" return(NOT);
-<INITIAL>"|" return(PIPE);
-<INITIAL>"=" return(LD);
-<INITIAL>"==" return(EQUAL);
+<INITIAL>"==" return(EQ);
 <INITIAL>"!=" return(NE);
 <INITIAL>">" return(GT);
 <INITIAL>">=" return(GE);
@@ -118,6 +115,8 @@ char *Parse_closeStringBuffer() {
 <INITIAL>"then" return(THEN);
 <INITIAL>"else" return(ELSE);
 
+<INITIAL>"use" return(USE);
+
 <INITIAL>"main" return(MAIN);
 
 
@@ -129,8 +128,8 @@ char *Parse_closeStringBuffer() {
 <INITIAL>[0-9]+ { yylval.longval = atol(yytext);
          return (INT_LITERAL);}
 
-<INITIAL>"//"[^\n]* ; //comment
-<INITIAL>"--"[^\n]* ; //comment
+<INITIAL>"//"[^\n]* { yycolumn=1; }; //comment
+<INITIAL>"--"[^\n]* { yycolumn=1; }; //comment
 <INITIAL>"/*" BEGIN(COM_STATE);
 <INITIAL>"(*" BEGIN(COM_STATE);
 <COM_STATE>. ;
@@ -139,8 +138,8 @@ char *Parse_closeStringBuffer() {
 <COM_STATE>"*)" BEGIN INITIAL; //comment
 
 
-<INITIAL>\r\n ;
-<INITIAL>[\n|\r] ;
+<INITIAL>\r\n { yycolumn=1; };
+<INITIAL>[\n|\r] { yycolumn=1; };
 <INITIAL>[ \t]+ ;
 <INITIAL><<EOF>> {return END_OF_FILE;}
 
@@ -162,6 +161,7 @@ char *Parse_closeStringBuffer() {
 }
 <STRING_STATE>\n        {
     Parse_addString('\n');
+    yycolumn=1;
     //yyerror("Unterminated string");
     //BEGIN(INITIAL);
     //return DELIMITER;

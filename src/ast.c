@@ -152,6 +152,7 @@ Ast *ast_makeSymbol(char *name) {
   ptr = ast_myalloc();
   ptr->id = AST_SYM;
   ptr->sym = recordSymbol(&SymTable, name);
+  
   return ptr;
 }
 
@@ -250,15 +251,17 @@ Ast *ast_paramToCons(Ast *ast) {
   // This function makes it an agent form like:
   //   AST_OPCONS(NULL, List(a, AST_OPCONS(NULL, List(b, NIL())))
 
-  if (ast == NULL) {
-    return ast_makeAST(AST_NIL, NULL, NULL);
+  if ((ast == NULL) || (ast->id == AST_NIL)) {
+    //    return ast_makeAST(AST_NIL, NULL, NULL);
+    return NULL;
   }
 
+  
+  
   Ast *head = ast->left;
   Ast *tail = ast->right;
-  Ast *ret = ast_makeAST(AST_OPCONS, NULL,
-			 ast_makeList2(head, ast_paramToCons(tail)));
-  return ret;
+
+  return ast_makeAST(AST_LIST, head, ast_paramToCons(tail));
   
 }
 
@@ -329,7 +332,7 @@ void ast_puts(Ast *p) {
     "LT", "LE",  "EQ", "NE", "UNM", "AND", "OR", "NOT",
 
     
-    "CONS", "NIL", 
+    "OPCONS", "MKLIST", "NIL", 
     "RAND", "SRAND", 
     
     // default

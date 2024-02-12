@@ -1,5 +1,20 @@
 # Change log
 
+### v0.2.0 (dev) (released on 14 Dec 2023)
+
+#### Polished
+
+- **Old style syntax**: The syntax becomes a fully round bracketed notation. It loses the intuition of correspondence with interaction nets, but it becomes easier to read and write programs (because it is old-fashioned, which most people know).
+
+#### New features
+
+- **-f option to read a source file**: When Train is invoked with `-f` *filename*, it reads the contents of *filename* and terminates. 
+- **List notation is available**: We can use a list notation such as `[t1,t2,...,tn]` and `x:xs`.
+- **Kindly error messages**: Error messages have column number. Other helpful clues can be included.
+
+
+### 
+
 ### v0.1.7 (released on 14 Dec 2023)
 
 #### Bug fixed
