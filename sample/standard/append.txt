@@ -1,0 +1,6 @@
+-- definitions
+append ([], ys) = ys;
+append (x:xs,ys) = x:(append (xs,ys));
+
+-- main
+main = append([A,B,C], [D,E,F]);

@@ -1,0 +1,9 @@
+-- definitions
+rev [] = [];
+rev x:xs = append (rev xs, [x]);
+
+append ([], ys) = ys;
+append (x:xs,ys) = x:(append (xs,ys));
+
+-- main
+main = rev [A,B,C];

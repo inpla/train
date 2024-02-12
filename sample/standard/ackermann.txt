@@ -1,0 +1,9 @@
+-- definitions
+ack  (Z,    y) = S(y);
+ack  (S(x), y) = ackS (y, x);
+ackS (Z,    x) = ack (x, (S(Z)));
+ackS (S(y), x) = ack (x1, (ackS (y,x2))) { Dup(x1,x2)~x };
+
+-- main
+main = ack (S(S(S(Z))), S(S(Z)));
+{prnat main} -- print the result as numeral (Inpla command)

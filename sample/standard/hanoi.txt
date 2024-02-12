@@ -1,0 +1,20 @@
+// Tower of Hanoi
+-- definitions
+hanoi (Z, source, target, aux) = []
+ { Eraser~source, Eraser~target, Eraser~aux};
+
+hanoi (S(n), source, target, aux) =
+  let ret1 = hanoi (nn1, src1, aux1, tgt1) in
+  let ret2 = hanoi (nn2, aux2, tgt2, src2) in
+  append (ret1, Tuple(nn3,src3,tgt3):ret2)
+  { n ~ Dup(nn1, Dup(nn2, nn3)),
+    source ~ Dup(src1, Dup(src2, src3)),
+    target ~ Dup(tgt1, Dup(tgt2, tgt3)),
+    aux ~ Dup(aux1, aux2) };
+
+append ([], ys) = ys;
+append (x:xs,ys) = x:(append (xs,ys));
+
+-- main
+main = hanoi (S(S(S(Z))), A,C,B);
+

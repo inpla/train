@@ -1,0 +1,10 @@
+-- definitions
+fib Z = Z;
+fib S(x) = fibS x;
+fibS Z = S(Z);
+fibS S(x) = add (fib x1, fibS x2) { Dup(x1,x2)~x };
+add (Z,x) = x;
+add (S(y),x) = S(add(x,y));
+
+-- main
+main = fib S(S(S(S(S(S(Z)))))); -- should be 8 because 0 1 1 2 3 5 8
