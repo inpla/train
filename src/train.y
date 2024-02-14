@@ -1772,6 +1772,20 @@ int main(int argc, char *argv[])
 	exit(0);
 	break;
 
+	
+      case '-':
+      case 'h':
+      case '?':
+	fprintf(stderr, "Version %s (%s)\n", VERSION, BUILT_DATE);
+	fputs("Usage: train [options]\n", stderr);
+	fputs("Options:\n", stderr);
+	fprintf(stderr, " -f <filename>    Set input file name                     (Default:      STDIN)\n");
+	fprintf(stderr, " -v               Print the version\n");	
+	fprintf(stderr, " -h               Print this help message\n\n");	
+	exit(-1);
+	break;
+
+	
       case 'f':
 	i++;
 	if (i < argc) {
@@ -1782,8 +1796,18 @@ int main(int argc, char *argv[])
 	  exit(1);
 	}
 	break;
+
+      default:
+        fprintf(stderr, "ERROR: Unrecognized option %s\n", argv[i]);
+        fprintf(stderr, "Use -h option for getting more information.\n\n");
+        exit(-1);
+	
 	
       }
+    } else {
+      fprintf(stderr, "ERROR: Unrecognized option %s\n", argv[i]);
+      fprintf(stderr, "Use -h option for getting more information.\n\n");
+      exit(-1);
     }
   }
 
