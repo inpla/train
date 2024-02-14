@@ -21,8 +21,8 @@
 
 
 
-#define VERSION "0.1.8 (secret)"
-#define BUILT_DATE  "11 Feb 2024"
+#define VERSION "0.2.1 (dev)"
+#define BUILT_DATE  "14 Feb 2024"
   
 
  
@@ -141,7 +141,7 @@ term
 term_let
 term_opcons
 term_mklist
-term_agent
+term_funapp
 term_atom
 
 
@@ -161,7 +161,7 @@ multiplicative_expr primary_expr
 //%type <chval> term_symbol
 
 
- // %right COLON
+ //%right ':'
 
 
 // For error message information
@@ -428,6 +428,8 @@ term
 ;
 
 
+
+
 term_let
 //(LET (LD (SYM_LIST x1 x2 x3) TERM) TERM)
 : LET NAME '=' term IN term
@@ -440,38 +442,13 @@ term_let
 		   ast_makeAST(AST_LD, $3, $6),
 		   $8);
 }
-| term_opcons
-;
-
-term_opcons
-: term_agent ':' term
-{
-  $$ = ast_makeAST(AST_OPCONS, NULL, ast_makeList2($1, $3));
-}
-| term_agent
+| term_funapp
 ;
 
 
 
-term_agent
-: AGENT
-{ 
-  $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), NULL);
-}
-| AGENT term_agent
-
-{  
-  $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), ast_makeList1($2));
-}
-| AGENT '(' term_sequence_twomore ')'
-{  
-  $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), $3);
-}
-| NAME
-{ 
-  $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), NULL);
-}
-| NAME term_agent
+term_funapp
+: NAME term_funapp
 {  
   $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), ast_makeList1($2));
 }
@@ -479,26 +456,7 @@ term_agent
 {  
   $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), $3);
 }
-
-//
-// with attr_expr
-| AGENT attr_expr
-{
-  $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), $2);
-}
-| AGENT attr_expr term_agent
-{
-  $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), ast_addLast($2,$3));
-}
-| AGENT attr_expr '(' term_sequence_twomore ')'
-{
-  $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), ast_addLast($2,$4));
-}
-| NAME attr_expr
-{
-  $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), $2);
-}
-| NAME attr_expr term_agent
+| NAME attr_expr term_funapp
 {
   // NAME attr t1  ==> NAME [t1, attr]
   $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), ast_makeCons($3, $2));
@@ -517,10 +475,18 @@ term_agent
     $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), newlist);
   }
 }
-| term_mklist
+| term_opcons
 ;
 
 
+
+term_opcons
+: term_mklist ':' term_funapp
+{
+  $$ = ast_makeAST(AST_OPCONS, NULL, ast_makeList2($1, $3));
+}
+| term_mklist
+;
 
 
 term_mklist
@@ -542,9 +508,45 @@ term_mklist
 
 
 
+
+
 term_atom
-: 
-'(' term ')' { $$ = $2; }
+: AGENT
+{ 
+  $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), NULL);
+}
+| AGENT term_atom
+{  
+  $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), ast_makeList1($2));
+}
+| AGENT '(' term_sequence_twomore ')'
+{  
+  $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), $3);
+}
+| NAME
+{ 
+  $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), NULL);
+}
+//
+// with attr_expr
+| AGENT attr_expr
+{
+  $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), $2);
+}
+| AGENT attr_expr term_atom
+{
+  $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), ast_addLast($2,$3));
+}
+| AGENT attr_expr '(' term_sequence_twomore ')'
+{
+  $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), ast_addLast($2,$4));
+}
+| NAME attr_expr
+{
+  $$=ast_makeAST(AST_NAME, ast_makeSymbol($1), $2);
+}
+
+| '(' term ')' { $$ = $2; }
 ;
 
 
@@ -976,7 +978,20 @@ void puts_term_from_ast(Ast *p) {
 
     Ast *hd = ast_list->left;
 
-    puts_term_from_ast(hd);
+    if (((hd->id == AST_NAME) && (hd->right == NULL)) // x y ...
+	|| (hd->id == AST_AGENT) // Z S(x) ...
+	|| (hd->id == AST_MKLIST) // [t,s,u,...]
+	|| (hd->id == AST_NIL) // []
+	) {
+	
+      puts_term_from_ast(hd);
+      
+    } else {
+      printf("(");
+      puts_term_from_ast(hd);
+      printf(")");
+    }
+      
     printf(":");
     hd = ast_list->right->left;    
     puts_term_from_ast(hd);
@@ -1105,10 +1120,11 @@ void puts_main_symlist(Ast *p) {
 
 int is_non_nested(Ast *ast) {
 
+  
   if (ast == NULL) {
     return 1;
   }
-  
+
   switch (ast->id) {
   case AST_AGENT: {
     Ast *args = ast->right;
@@ -1154,6 +1170,7 @@ int is_non_nested(Ast *ast) {
     //    puts("ERROR: is_non_nested");
     //    ast_puts(ast);
     //    exit(1);
+    
     return 1;
   }
 
@@ -1202,7 +1219,9 @@ int compile_term(Ast *sym_list, Ast *body) {
 
   //  puts("\ncompile_term");
   //  ast_puts(body); puts("");
-  
+
+
+
   switch (body->id) {
 
   case AST_NIL:
@@ -1622,7 +1641,7 @@ int compile_rule(Ast *at) {
 
   case AST_NIL:
   case AST_MKLIST:
-  case AST_OPCONS: {    
+  case AST_OPCONS: {
     compile_term(sym_list, body);
     break;
   }

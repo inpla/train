@@ -1,6 +1,36 @@
 # Change log
 
-### v0.2.0 (dev) (released on 14 Dec 2023)
+### v0.2.1 (dev) (released on 14 Dec 2023)
+
+#### Bug fixed
+
+- **Printing of Infix operator Cons `:`**: This operator has the left binding, but this was not reflected in  the translation results. The results are now displayed correctly:
+
+  ```
+  (* previous *)
+  >>> main = (A:[B]):[[C]];
+  main~A:[B]:[[C]];
+  main;
+  >>> main = A:[B]:[[C]];
+  main~A:[B]:[[C]];
+  main;
+  >>>
+  
+  (* current version *)
+  >>> main = (A:[B]):[[C]];
+  main~(A:[B]):[[C]];
+  main;
+  >>> main = A:[B]:[[C]];
+  main~A:[B]:[[C]];
+  main;
+  >>>
+  ```
+
+  
+
+#### New features
+
+### v0.2.0 (dev) (released on 13 Dec 2023)
 
 #### Polished
 
@@ -10,10 +40,9 @@
 
 - **-f option to read a source file**: When Train is invoked with `-f` *filename*, it reads the contents of *filename* and terminates. 
 - **List notation is available**: We can use a list notation such as `[t1,t2,...,tn]` and `x:xs`.
-- **Kindly error messages**: Error messages have column number. Other helpful clues can be included.
+- **Kindly error messages**: Error messages have column number. Other helpful clues can be included. 
 
 
-### 
 
 ### v0.1.7 (released on 14 Dec 2023)
 

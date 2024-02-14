@@ -2,7 +2,7 @@
 
 Translator of a functional language to interaction nets. 
 
-- The current version is 0.2.0 (dev), released on **13 Feb 2024**. (See [Changelog.md](https://github.com/sintan310/train/blob/main/Changelog.md) for details.)
+- The current version is 0.2.1 (dev), released on **14 Feb 2024**. (See [Changelog.md](https://github.com/sintan310/train/blob/main/Changelog.md) for details.)
 
 
 
@@ -32,7 +32,7 @@ Translator of a functional language to interaction nets.
 	```
 
 
-* The symbol `>>>` is a prompt of Train. After the prompt you can write rules of the new language. We need the delimiter `;` at the end of a rule. In future, the delimiter will not be required.
+* The symbol `>>>` is a prompt from Train. After the prompt you can write rules of the new language. We need the delimiter `;` at the end of a rule.
 
   ```
   >>> inc(Z) = S(Z);
@@ -57,7 +57,7 @@ Translator of a functional language to interaction nets.
 
 #### Batch mode
 
-- Train has also the batch mode in which a file is evaluated. This is available when invoked with an execution option `-f`  *filename*. There are sample files in the `sample` folder. Here we introduce one of these:
+- Train also has the batch mode in which a file is evaluated. This is available when invoked with an execution option `-f`  *filename*. There are some sample files in the `sample` folder. Here is one of these:
 
 ##### Fibonacci number
 
@@ -98,7 +98,7 @@ Translator of a functional language to interaction nets.
     $
     ```
 
-    When you have [inpla](https://github.com/inpla/inpla/), which is an interaction nets evaluator, this result is executed as follows:
+    If you have [Inpla](https://github.com/inpla/inpla/), which is an interaction nets evaluator, this result is executed as follows:
 
     ```
     $ ./train -f sample/standard/fibonacci.txt | <path_to_inpla>/inpla
@@ -112,50 +112,56 @@ Translator of a functional language to interaction nets.
 
 ## Syntax
 
-The following is a definition of:
+- **Expressions**: An expression `e` is defined by the following syntax where `elist` is a list of expressions and `xlist` is a list of variables:
 
-- expressions `e`, 
-- lists of expressions `elist`,
-- lists of variables `xlist`.
+  ```
+  <expression> ::= x 
+                 | C <elist>
+                 | f <elist>
+                 | let <xlist> = <elist> in <elist>
+                 | (e)
+  
+  <elist> ::= e
+            | (e1,...,en)
+  <xlist> ::= x
+            | (x1,...,xm)
+  
+      where 
+       - x, x1,...,xm are distinct variables,
+       - e, e1,...,en are expressions.
+       - C is a constructor symbol,
+       - f is a function symbol.
+  ```
 
-```
-e ::= x 
-    | C elist
-    | f elist
-    | let xlist = elist1 in elist2
-    | (e1)
+- **Function definitions**: This is a constructor system where, in function applications, pattern matching only takes place on the first argument. The matching depth is one. The definition of a function `f` of *(n+1)*-arguments for a constructor C is written according to the following `funcdef` syntax:
 
-elist ::= e
-        | (e1,...,en)
-xlist ::= x
-        | (x1,...,xj)
+  ```
+  <funcdef> ::= f (C xlist, y1,...,yn) = elist;
+  
+      where
+      - y1,...,yn are distinct variables,
+      - xlist is a list of variables,
+      - elist is a list of expressions,
+      - C is a constructor symbol,
+      - each variable in xlist and y1,...,yn
+        must occur once in elist.
+  ```
 
-    where 
-     - x,x1, ..., xj are distinct variables,
-     - C is a constructor,
-     - f is a function,
-     - e1,...,ei and e1',...,ei' are expressions.
-```
-
-This is a constructor system where, in function applications, pattern matching takes place only on the first argument. A *(n+1)*-arguments function `f` with a constructor `C` is defined as follows:
-
-```
-f (C xlist, y1,...,yn) = elist;
-
-    where
-    - xlist is a list of variables,
-    - y1,...,yn are distinct variables,
-    - elist is a list of expressions,
-    - each variable in xlist and y1,...,yn
-      must occur once in elist.
-```
-
-- **Constructors and functions:**
-  -  Strings starting with a capital letter, such as `S`, `Z`, `Cons`, `Nil` are recognised as **constructors**. 
-  - For **functions**, use strings that start with a lower case letter, such as `foo`, `inc`,  `add`, `dup`.
+- **Symbols of constructors and functions:**
+  - Strings beginning with a capital letter, such as `S`, `Z`, `Cons`, `Nil` are recognised as **constructors**. 
+  - For **functions**, use strings that begin with a lowercase letter, such as `foo`, `inc`,  `add`, `dup`.
 
 
-The following is an example of addition on unary numbers:
+- **Main program**: The main program is written in the following way:
+
+  ```
+  main = elist;
+  
+      where elist is a list of expressions.
+  ```
+
+
+The following is an example of addition on unary numbers. The given function definitions are translated into interaction nets descriptions, where these follow [Inpla](https://github.com/inpla/inpla/) syntax:
 
   ```
   >>> add(Z,x) = x;
@@ -167,18 +173,14 @@ The following is an example of addition on unary numbers:
   >>> add(S(x),y) = add(x,S(y));
   add(r0, y) >< S(x) =>
       add(r0, S(y))~x;
+  >>> main = add(S(S(Z)), S(S(S(Z))));
+  add(main, S(S(S(Z))))~S(S(Z));
+  main;
   >>>
   ```
 
-- **Main program**: The main program is written by the following way:
 
-  ```
-  main = elist;
-  
-      where elist is a list of expressions.
-  ```
-
-  For instance, the following is a program set of the addition (where `--` is a comment)
+  For example, the following is a program of the addition (where `--` is a comment)
 
   ```
   -- rules
@@ -191,7 +193,7 @@ The following is an example of addition on unary numbers:
 
 
 #### Extensions:
-- **With inpla notation** (Duplication of unary numbers): We can contain inpla notation by using braces `{` and `}`:
+- **With inpla notation** (duplication of unary numbers): We can include [Inpla](https://github.com/inpla/inpla/) notation by using braces `{` and `}`:
   
   ```
   >>> dup Z = (a,b) { Dup(a,b)~Z };
@@ -211,7 +213,7 @@ The following is an example of addition on unary numbers:
   >>>
   ```
 
-- **Attributes**: We can attach attributes (integer numbers) to functions and constructors by using dot `.`. In the right hand side, we can also attach arithmetic expressions on attributes:
+- **Attributes**: We can attach attributes (integers) to functions and constructors by using dot `.`. On the right hand side, we can also attach arithmetic expressions on attributes:
   
   ```
   >>> inc Int.x = Int.(x+1);
@@ -225,7 +227,15 @@ The following is an example of addition on unary numbers:
       r0~Int(x+y);
   ```
   
-- **Conditional branches**: `if-then-else` is available on the attributes:
+- **Conditional branches**: `if-then-else` is available on the attributes when defining functions:
+  
+  ```
+  <funcdef> ::= f (C xlist, y1,...,yn) = elist;
+              | <if-then-else>;
+  <if-then-else> ::= if <expression on attributes> then <elist> else <elist>;
+  ```
+  
+  The following is an example:
   
   ```
   >>> foo Int.x = if x==1 then Int.x+1 else if x==2 then Int.x+10 else Int.x+100;
@@ -268,14 +278,6 @@ The following is an example of addition on unary numbers:
   ```
   
   
-
-## Limitation
-
-The current version has some limitations:
-
-- Built-in constants such as Cons, Nil are not supported.
-
-
 
 ## License
 

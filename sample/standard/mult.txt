@@ -1,0 +1,13 @@
+-- definitions
+mult (Z, y) = Z { Eraser~y };
+mult (S(x), y) = add (mult (x,y1), y2)
+  { Dup(y1,y2) ~ y };
+
+add (Z, y) = y;
+add (S(x), y) = S(add (x,y));
+
+-- main
+main = mult(S(S(Z)), S(S(S(Z))));
+
+{prnat main} -- `prnat' is a command of Inpla to outputs unary numbers as natural numbers.
+// 2*3 -> S(S(S(S(S(S(Z))))))  (it means 6)

@@ -1,0 +1,215 @@
+// N-Queen on unary natural numbers
+
+--------------------------------------------------------
+-- definitions
+--------------------------------------------------------
+
+-- equality between unary natural numbers
+eq (Z,m) = eqZ m;
+eq (S(x),m) = eqS (m,x);
+
+eqZ Z = True;
+eqZ S(x) = False { Eraser~x };
+
+eqS (Z,x) = False { Eraser~x };
+eqS (S(y), x) = eq (x,y);
+
+
+// UNIT TEST
+// main = eq (Z,Z);     {free ifce}
+// main = eq (Z,S(Z));  {free ifce}
+// main = eq (S(Z),Z);  {free ifce}
+// main = eq (S(Z),S(Z));{free ifce}
+
+
+
+-- eq (stream version)
+eqZ_stream Z    = (True, Z, Z);
+eqZ_stream S(m) = (False, S(m), Z);
+
+eqS_stream (Z,n) = (False, Z, n);
+eqS_stream (S(m), n) = 
+  let (r,w,n1) = eq_stream(n, m) in
+  (r,S(w), n1);
+
+eq_stream (S(n),m) = 
+  let (r1,m1,w) = eqS_stream(m,n) in
+  (r1,m1,S(w));
+eq_stream (Z,m) = eqZ_stream(m);
+
+
+// UNIT TEST
+// main = eq_stream (Z,Z);       {free ifce}
+// main = eq_stream (Z,S(Z));  {free ifce}
+// main = eq_stream (S(Z),Z);  {free ifce}
+// main = eq_stream (S(Z),S(Z));{free ifce}
+
+
+
+-- member (stream version)
+member ([], m) = (False, m, []);
+member (n:ys, m) =
+  let (eq_result, m2, n2) = eq_stream(n,m) in
+  let (r, m1, cnt) = member_sub (eq_result, m2, ys) in
+      (r, m1, n2:cnt);
+
+member_sub (True, m, ys) = (True, m, ys);
+member_sub (False, m, ys) =  member(ys, m);
+
+
+// UNIT TEST
+// main = member ([Z], Z);       {free ifce}
+// main = member ([S(Z)], Z);       {free ifce}
+// main = member ([S(Z),Z], Z);       {free ifce}
+// main = member ([S(Z),Z], S(S(Z)));       {free ifce}
+
+
+
+
+-- len_list (stream version)
+len_list [] = (Z,[]);
+len_list x:xs = 
+  let (length, cnt) = len_list_sub (xs, S(Z)) in
+  (length, x:cnt);
+
+len_list_sub ([], ct) = (ct, []);
+len_list_sub (x:xs, ct) = 
+  let (length, cnt) = len_list_sub (xs, S(ct)) in
+  (length, x:cnt);
+
+
+// UNIT TEST
+// main = len_list ([S(Z),Z, S(S(Z))]);  {free ifce}
+
+
+
+
+-- len_list (non-stream version)
+len [] = Z;
+len x:xs = 
+  let (length, orig_list) = len_list (x:xs) in
+  length
+  { Eraser~orig_list };
+
+
+// UNIT TEST
+// main = len ([S(Z),Z, S(S(Z))]);       {free ifce}
+
+
+
+-- diff
+diff (Z, m) = m;
+diff (S(n), m) = diff_S(m,n);
+diff_S(Z,n) = S(n);
+diff_S(S(m),n) = diff(n,m);
+
+
+
+-- threat
+threat ([], k, q) = (False, [])
+  { Eraser~k, Eraser~q };
+
+
+
+(* The `let' in the below function  is required to let the system know about
+   the number of return values of `threat_if'.
+   So, do not erase it.
+*)
+threat (x:xs, k, q) =
+  let (result, done) = threat_if(eq(diff (q1,x1), k1), k2, q2, x2:xs) in
+  (result, done)
+  { Dup(x1,x2)~x, Dup(q1,q2)~q, Dup(k1,k2)~k };
+
+
+threat_if (True, k, q, xxs) = 
+  (True, xxs)
+  { Eraser~k, Eraser~q };
+
+
+threat_if (False, k, q, xxs) = 
+  let (x1,xs1) = list_match xxs in
+  let (r,cnt) = threat (xs1, S(k), q) in
+  (r, x1:cnt);
+
+
+
+-- list decompose
+list_match x:xs = (x,xs);
+
+
+
+-- append
+append ([], ys) = ys;
+append (x:xs,ys) = x:(append (xs,ys));
+
+
+
+-- dec
+dec Z = Z;
+dec S(n) = n;
+
+
+
+---------------------------
+-- n-queens
+---------------------------
+
+-- interface of the n-queen problem
+queen (START, n) = 
+  queen_main (n2, [], n1)
+  { Dup(n1,n2)~n };
+
+
+
+queen_main (Z, board, n) = []
+  { Eraser~board, Eraser~n };
+
+queen_main (S(m), board, n) =
+  let (mem_ret, done_m, done_b) = member(board, S(m)) in
+  queen__if_m_in_b(mem_ret, done_b, n, done_m);
+
+
+
+queen__if_m_in_b(True, board, n, m) =
+  queen_main(dec(m), board, n);
+
+queen__if_m_in_b(False, board, n, m) =
+  let (ret, done_b) = threat(board, S(Z), mm) in
+  queen__if_threat(ret, done_b, n, mmm)
+  { Dup(mm,mmm) ~ m };
+
+
+
+queen__if_threat(True, board, n, m) = 
+  queen_main(dec(m), board, n);
+
+queen__if_threat(False, board, n, m) = 
+  let (length, done_b) = len_list(board) in
+  queen__if_lastelem(eq(dec(nn), length), done_b, nnn, m)
+  { Dup(nnn,nn) ~ n };
+
+
+queen__if_lastelem(True, board, n, m) = 
+  (mm:bb):queen_main(dec(mmm), bbb, n)
+  { Dup(bb, bbb) ~ board,
+    Dup(mm, mmm) ~ m
+  };
+ 
+queen__if_lastelem(False, board, n, m) = 
+  let cnt1 = queen_main(nn, mm:bb, nnn) in
+  let cnt2 = queen_main(dec(mmm), bbb, nnnn) in
+  append(cnt1, cnt2)
+  { Dup(bb, bbb) ~ board,
+    Dup(nn, Dup(nnn, nnnn)) ~ n,
+    Dup(mm, mmm) ~ m
+  };
+
+
+
+--------------------------------------------------------
+-- main
+--------------------------------------------------------
+main = len(queen (START, S(S(S(S(Z)))))); // 4_Queens -> 2
+//main = len(queen (START, S(S(S(S(S(S(S(S(Z)))))))))); // 8_Queens -> 92
+{prnat main}
+

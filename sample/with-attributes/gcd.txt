@@ -1,0 +1,8 @@
+-- definitions
+gcd Param.(a,b) = 
+  if b==0 then Int.a 
+  else gcd Param.(b, a%b);
+
+
+-- main
+main = gcd Param.(14,21); 
