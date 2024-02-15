@@ -35,22 +35,20 @@ Translator of a functional language to interaction nets.
 * The symbol `>>>` is a prompt from Train. After the prompt you can write rules of the new language. We need the delimiter `;` at the end of a rule.
 
   ```
-  >>> inc(Z) = S(Z);
+  >>> inc Z = S(Z);
   inc(r0) >< Z =>
       r0~S(Z);
-  >>> inc(Z) = S(Z);
-  inc(r0) >< Z =>
-      r0~S(Z);
-  >>> inc(S(x)) = S(inc x);
+  >>> inc S(x) = S(inc x);
   inc(r0) >< S(x) =>
       inc(w0)~x, r0~S(w0);
   >>>
   ```
-
+  
 * To quit this system, use `:q` or  `:quit` command:
 
   ```
   >>> :q
+  $
   ```
 
 
