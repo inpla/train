@@ -1,5 +1,13 @@
 # Change log
 
+### v0.2.2 (dev) (released on 15 Dec 2023)
+
+#### Bug fixed
+
+- **Line number on error messages**: In the batch mode, line numbers on error messages were incorrect. This is now fixed.
+
+
+
 ### v0.2.1 (dev) (released on 14 Dec 2023)
 
 #### Bug fixed

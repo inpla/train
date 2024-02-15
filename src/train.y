@@ -21,8 +21,8 @@
 
 
 
-#define VERSION "0.2.1 (dev)"
-#define BUILT_DATE  "14 Feb 2024"
+#define VERSION "0.2.2 (dev)"
+#define BUILT_DATE  "15 Feb 2024"
   
 
  
@@ -179,12 +179,14 @@ s
   puts(Errormsg);
   free(Errormsg);
   ast_heapReInit();
-  if (yyin == stdin) yylineno=0; yycolumn=1;
+  if (yyin == stdin) yylineno=0;
   //  YYACCEPT;
+  yycolumn=1;
   YYABORT;
 }
 | ';' { 
-  if (yyin == stdin) yylineno=0; yycolumn=1;
+  if (yyin == stdin) yylineno=0;
+  yycolumn=1;
   YYACCEPT;
 }
 
@@ -196,7 +198,8 @@ s
   fflush(stdout);
   
   ast_heapReInit(); 
-  if (yyin == stdin) yylineno=0; yycolumn=1;
+  if (yyin == stdin) yylineno=0;
+  yycolumn=1;
   YYACCEPT;
 }
 
@@ -209,7 +212,8 @@ s
   fflush(stdout);
   
   ast_heapReInit(); 
-  if (yyin == stdin) yylineno=0; yycolumn=1;
+  if (yyin == stdin) yylineno=0;
+  yycolumn=1;
   YYACCEPT;
 }
 
@@ -220,7 +224,8 @@ s
   fflush(stdout);
   
   ast_heapReInit(); 
-  if (yyin == stdin) yylineno=0; yycolumn=1;
+  if (yyin == stdin) yylineno=0;
+  yycolumn=1;
   YYACCEPT;
 }
 
@@ -232,7 +237,8 @@ s
   fflush(stdout);
   
   ast_heapReInit(); 
-  if (yyin == stdin) yylineno=0; yycolumn=1;
+  if (yyin == stdin) yylineno=0;
+  yycolumn=1;
   YYACCEPT;
 }
 
@@ -240,7 +246,8 @@ s
 
 
 | command {
-  if (yyin == stdin) yylineno=0; yycolumn=1;
+  if (yyin == stdin) yylineno=0;
+  yycolumn=1;
   YYACCEPT;
 }
 ;
