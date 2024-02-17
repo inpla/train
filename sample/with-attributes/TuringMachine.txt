@@ -1,0 +1,157 @@
+---------------------------------------------------------------
+-- TM rule table:
+--   Every 1 on tapes becomes 0
+--   It finishes when the head reads a tape cell whose value is 0.
+-- Rule
+-- (state, sym) => command
+-- (0    ,   1) => Write(0, 1)      // write 0 and change state into 1
+-- (1    ,   0) => GoRight(2)       // headPos+1 and change state into 2
+-- (2    ,   1) => Write(0, 1)      // write 0 and change state into 1
+-- otherwise    => Halt    
+--
+-- Usage: getRule Pair.(state, sym) --> command
+--   where command has one of the followings:
+--         Write.(sym, new_state): write sym and change state into new_state
+--         GoRight.(new_state): headPos++ and change state into new_state
+--         Halt.(state, sym): Stop execution with information (state, sym)
+---------------------------------------------------------------
+
+getRule Pair.(state, sym) =
+	if (state==0) && (sym==1) then Write.(0, 1)
+	else if (state==1) && (sym==0) then GoRight.(2)
+	else if (state==2) && (sym==1) then Write.(0, 1)
+	else Halt.(state, sym);
+
+
+
+---------------------------------------------------------------
+-- rules for TM
+---------------------------------------------------------------
+
+
+
+---------------------------------------------------------------
+-- changeSym.(headPos, sym) tape
+--   It changes a symbol at headPos on tape to Sym.sym.
+--
+-- Usage: changeSym.(0, 10) [Sym.1, Sym.2] --> [Sym.10, Sym.2]
+---------------------------------------------------------------
+
+changeSym.(headPos, sym) t:ts =  // t:ts is a tape
+  changeSym_sub.(headPos ,sym) (t:ts, []);
+
+
+changeSym_sub.(headPos, sym) (t:ts, done) =
+  if headPos==0
+  then append (done, (Sym.sym):ts) { Eraser~t }
+  else let done_new = append (done, [t])  in
+       changeSym_sub.(headPos-1, sym) (ts, done_new);
+					     
+changeSym_sub.(headPos, sym) ([], done) = Error.(headPos, sym) done;
+	 
+
+
+---------------------------------------------------------------
+-- do.(state, headPos) operation, tape
+--  It executes operation with a configuration (state, headPos, tape)
+--
+-- Usage: do(1,0) (Write.(10, 100), [Sym.1, Sym.2])
+--          --> (Configure.(100,0) [Sym.10, Sym.2])
+---------------------------------------------------------------
+
+
+do.(state, head) (Write.(sym, new_state), tape) =
+  let doneTape = changeSym.(head, sym) tape in
+  Configure.(new_state, head) doneTape;
+					 
+						 
+do.(state, head) (GoRight.(new_state), tape) =
+  Configure.(new_state, head+1) tape;
+
+
+do.(state, head) (Halt.(hstate, hsym), tape) =
+  STOP_Configure.(state, head, hstate, hsym) tape;
+
+
+
+---------------------------------------------------------------
+-- getSym.(headPos) tape
+--  It returns two values:
+--      * symbol at headPos on tape
+--      * tape
+--
+-- Usage: getSym.(0) [Sym.1, sym.10] --> (Sym.(1), [Sym.1, sym.10])
+---------------------------------------------------------------
+
+-- dummy for the return bundle arity
+getSym_sub.(a) ([],x) = ([],x);
+
+
+getSym.(headPos) t:ts =
+  getSym_sub.(headPos) (t:ts, []);
+
+getSym_sub.(headPos) (t:ts, done) =  
+  if headPos==0 then
+    let r = append (done, t1:ts) in
+    (r, t2) { Dup(t1,t2)~t }
+  else
+    let cnt = append (done, [t]) in
+    getSym_sub.(headPos-1) (ts,cnt);
+
+
+getSym_sub.(headPos) ([], done) =
+  if headPos==0 then
+    let r = append (done, [Sym.0]) in
+    (r, Sym.0)
+  else
+    let new_done = append (done, [Sym.0]) in
+    getSym_sub.(headPos-1) ([], new_done);
+     
+
+---------------------------------------------------------------
+-- oneCycle (Configure.(state, head) tape)
+--   It performes one step execution
+--   with a confuguration (Configure.(state, head) tape).
+--
+-- Usage: oneCycle (Configure.(0,0) [Sym.1,Sym.1,Sym.1,Sym.0])
+---------------------------------------------------------------
+
+oneCycle Configure.(state, head) tape =
+  let (tapeDone, sym) = getSym.head tape in
+  oneCycle_sub.(state, head) (sym, tapeDone);
+
+
+oneCycle_sub.(state, head) (Sym.s, tape) = 
+  let rule = getRule Pair.(state, s) in
+   do.(state, head) (rule, tape);
+
+
+
+---------------------------------------------------------------
+-- allCycle (Configure.(state, head) tape)
+--   It performes execution
+--   with a configuration (state, head, tape)
+--   until it stops.
+--
+-- Usage: allCycle (Configure.(0,0) [Sym.1,Sym.1,Sym.1,Sym.0])
+---------------------------------------------------------------
+
+allCycle (Configure.(state,headPos) tape) =
+  allCycle (oneCycle (Configure.(state,headPos) tape));
+
+allCycle (STOP_Configure.(state, headPos, hstate, hsym) tape) =
+  Configure.(state, headPos) tape;
+
+
+
+
+append ([], ys) = ys;
+append (x:xs,ys) = x:(append (xs,ys));
+
+
+// ------ main
+main =
+  let configure = Configure.(0,0) [Sym.1,Sym.1,Sym.1,Sym.1,Sym.1,Sym.0] in
+  allCycle configure;
+  // -->* Configure(2,5,[Sym(0),Sym(0),Sym(0),Sym(0),Sym(0),Sym(0)])
+  

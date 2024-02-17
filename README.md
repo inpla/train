@@ -2,7 +2,7 @@
 
 Translator of a functional language to interaction nets. 
 
-- The current version is 0.2.2 (dev), released on **15 Feb 2024**. (See [Changelog.md](https://github.com/sintan310/train/blob/main/Changelog.md) for details.)
+- The current version is 0.2.3, released on **17 Feb 2024**. (See [Changelog.md](https://github.com/sintan310/train/blob/main/Changelog.md) for details.)
 
 
 

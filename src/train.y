@@ -7,22 +7,15 @@
 #include <errno.h>
 #include <sched.h>
 
-  //#include "timer.h" //#include <time.h>
 #include "linenoise/linenoise.h"
   
 #include "ast.h"
-  //#include "id_table.h"
-  //#include "name_table.h"
-  //#include "name_table.h"
-  //#include "mytype.h"
-  //#include "inpla.h"
-
 #include "config.h"  
 
 
 
-#define VERSION "0.2.2 (dev)"
-#define BUILT_DATE  "15 Feb 2024"
+#define VERSION "0.2.3 (dev)"
+#define BUILT_DATE  "17 Feb 2024"
   
 
  
@@ -203,6 +196,7 @@ s
   YYACCEPT;
 }
 
+/*
 | fundef STRING_LITERAL ';'
 {
   exec($1);
@@ -216,7 +210,7 @@ s
   yycolumn=1;
   YYACCEPT;
 }
-
+*/
 
 | STRING_LITERAL
 {
@@ -291,7 +285,7 @@ command
 
 // (AST_RULE
 //      [foo_sym_agent, const_agent, params1, params2, ...]
-//      (AST_BUNDLE [term1, term2,...] NULL)
+//      (funcdef_bofy)
 // )
 
 
@@ -371,15 +365,16 @@ fundef_constr
 | AGENT attr_declaration
 { $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), $2); }
 //
-/*
-| '(' AGENT attr_declaration ')'
-{ $$=ast_makeAST(AST_AGENT, ast_makeSymbol($2), $3); }
-//
-| '(' AGENT attr_declaration name_sequence ')'
+| AGENT attr_declaration NAME
 { $$=ast_makeAST(AST_AGENT,
-		 ast_makeSymbol($2),
-		 ast_addLast($3,$4)); }
-*/
+		 ast_makeSymbol($1),
+		 ast_makeList2($2, ast_makeSymbol($3)));
+}
+| AGENT attr_declaration '(' name_sequence ')'
+{ $$=ast_makeAST(AST_AGENT,
+		 ast_makeSymbol($1),
+		 ast_makeCons($2, $4));
+}
 //
 //
 | '(' fundef_constr ')'
@@ -389,8 +384,15 @@ fundef_constr
 
 
 
+
+
+
 fundef_body
 : term
+| term STRING_LITERAL
+{
+  $$ = ast_makeAST(AST_BODY, $1, ast_makeInplaSrc($2));
+}
 | if_sentence;
 
 
@@ -417,11 +419,24 @@ attr_name_sequence
 
 
 body
-// (AST_BODY term NULL)
-: MAIN '=' term  { $$ = ast_makeAST(AST_BODY, $3, NULL); }
+// (AST_MAIN term NULL)
+// or
+// (AST_MAIN term (AST_INPLA.string NULL NULL)
+: MAIN '=' term
+{
+  $$ = ast_makeAST(AST_MAIN, $3, NULL);
+}
+| MAIN '=' term STRING_LITERAL
+{
+  $$ = ast_makeAST(AST_MAIN, $3, ast_makeInplaSrc($4));
+}
 | LET '(' ')' '=' term
 {
-  $$ = ast_makeAST(AST_BODY, $5, NULL);
+  $$ = ast_makeAST(AST_MAIN, $5, NULL);
+}
+| LET '(' ')' '=' term STRING_LITERAL
+{
+  $$ = ast_makeAST(AST_MAIN, $5, ast_makeInplaSrc($6));
 }
 ; 
 
@@ -433,6 +448,8 @@ term
 { $$ = $2; }
 | term_let
 ;
+ 
+
 
 
 
@@ -522,7 +539,7 @@ term_atom
 { 
   $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), NULL);
 }
-| AGENT term_atom
+| AGENT term_mklist
 {  
   $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), ast_makeList1($2));
 }
@@ -540,7 +557,7 @@ term_atom
 {
   $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), $2);
 }
-| AGENT attr_expr term_atom
+| AGENT attr_expr term_mklist
 {
   $$=ast_makeAST(AST_AGENT, ast_makeSymbol($1), ast_addLast($2,$3));
 }
@@ -653,6 +670,10 @@ if_sentence
 if_compound
 : if_sentence
 | term
+| term STRING_LITERAL
+{
+  $$ = ast_makeAST(AST_BODY, $1, ast_makeInplaSrc($2));
+}
 ;
 
 
@@ -1395,7 +1416,14 @@ int compile_term(Ast *sym_list, Ast *body) {
     break;
   }
 
+  case AST_BODY: {
+    // (AST_BODY term (AST_INPLA.string NULL NULL))
 
+    compile_term(sym_list, body->left);
+    printf(", %s",  body->right->sym);    
+    break;
+  }
+    
   case AST_IF: {
     // (AST_IF expr (AST_THEN_ELSE then else))}
     printf("if ");
@@ -1447,8 +1475,7 @@ int compile_term(Ast *sym_list, Ast *body) {
 int compile_rule(Ast *at) {
   // (AST_RULE
   //      [foo_sym_agent, const_agent, arg1, arg2...]
-  //      //<body> <-- ast (not LIST for now)
-  //      (AST_BUNDLE explist NULL) 
+  //      funcDef_body
   // )
 
   Ast *body = at->right;
@@ -1458,6 +1485,18 @@ int compile_rule(Ast *at) {
     return 0;
   }
 
+  // BODY
+  // (AST_BODY term (AST_INPLA.string NULL NULL))
+  if (body->id == AST_BODY) {
+    char *inpla_src = body->right->sym;
+
+    Ast *term = body->left;
+    at->right = term;
+    
+    compile_rule(at);
+    printf(",\n   %s",  inpla_src);
+    return 1;
+  }
 
   
   // Let expression
@@ -1495,6 +1534,7 @@ int compile_rule(Ast *at) {
 
   }
 
+  
 
   // The first def_list (ie, sym)
   char *func_sym = at->left->left->sym;
@@ -1672,8 +1712,8 @@ int compile(Ast *ast) {
   //    puts("compile");
 
   switch (ast->id) {
-  case AST_BODY: {
-    // (AST_BODY expression NULL)
+  case AST_MAIN: {
+    // (AST_MAIN expression NULL)
     
     int bundle_arity = 1;
     
@@ -1707,6 +1747,13 @@ int compile(Ast *ast) {
     }
     
     compile_term(sym_list, ast->left);
+
+    if (ast->right != NULL) {
+      // strings for Inpla
+      printf(", %s", ast->right->sym);
+    }
+
+    
     puts(";");
     //puts_term_from_ast(sym_list);
     puts_main_symlist(sym_list);

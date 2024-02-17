@@ -157,6 +157,17 @@ Ast *ast_makeSymbol(char *name) {
 }
 
 
+Ast *ast_makeInplaSrc(char *string) {
+  Ast *ptr;
+  ptr = ast_myalloc();
+  ptr->id = AST_INPLA;
+  ptr->sym = string;
+  
+  return ptr;
+}
+
+
+
 
 Ast *ast_makeInt(long num) {
   Ast *ptr;
@@ -223,27 +234,6 @@ int ast_getLen(Ast *p) {
 }
 
 
-Ast *ast_makeBundle(Ast *list) {
-  int len = ast_getLen(list);
-  if (len == 0) {
-    return NULL;
-  }
-
-  if (len == 1) {
-    // (AST_LIST expression NULL)]
-    return list->left;    
-  }
-
-  // For the bundle
-  // (AST_BUNDLE list NULL)
-  Ast *ptr;
-  ptr = ast_myalloc();
-  ptr->id = AST_BUNDLE;
-  ptr->left = list;
-  ptr->right = NULL;
-  ptr->intval = ast_getLen(list);
-  return ptr;
-}
 
 Ast *ast_paramToCons(Ast *ast) { 
   // Suppose that ast has the following form:
@@ -320,8 +310,8 @@ void ast_puts(Ast *p) {
   static char *string_AstID[] = {
     // basic
     "SYM", "NAME", "INTNAME", "AGENT",
-    "RULE", "BODY", "IF", "THEN_ELSE", "LET", "APP",
-    "BUNDLE", 
+    "RULE", "MAIN", "BODY", "IF", "THEN_ELSE", "LET", "APP",
+    "INPLA", 
 
     // LIST
     "LIST", 

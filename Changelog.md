@@ -1,5 +1,13 @@
 # Change log
 
+### v0.2.3 (released on 17 Dec 2023)
+
+#### Bug fixed
+
+- **Inpla braces in if-then-else statements**: Braces for writing Inpla programs can now be placed in if-then-else statements.
+
+
+
 ### v0.2.2 (dev) (released on 15 Dec 2023)
 
 #### Bug fixed
