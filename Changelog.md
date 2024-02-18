@@ -1,6 +1,14 @@
 # Change log
 
-### v0.2.3 (released on 17 Dec 2023)
+### v0.2.4 (released on 18 Feb 2024)
+
+#### Bug fixed
+
+- **Too many parentheses**: When `x:y` was specified as an activate constant of a function declaration, it was output as `(x):y`. This is now fixed. 
+
+
+
+### v0.2.3 (released on 17 Feb 2024)
 
 #### Bug fixed
 
@@ -8,7 +16,7 @@
 
 
 
-### v0.2.2 (dev) (released on 15 Dec 2023)
+### v0.2.2 (dev) (released on 15 Feb 2024)
 
 #### Bug fixed
 
@@ -16,7 +24,7 @@
 
 
 
-### v0.2.1 (dev) (released on 14 Dec 2023)
+### v0.2.1 (dev) (released on 14 Feb 2024)
 
 #### Bug fixed
 
@@ -46,7 +54,7 @@
 
 #### New features
 
-### v0.2.0 (dev) (released on 13 Dec 2023)
+### v0.2.0 (dev) (released on 13 Feb 2024)
 
 #### Polished
 

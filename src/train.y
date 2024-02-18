@@ -14,8 +14,8 @@
 
 
 
-#define VERSION "0.2.3 (dev)"
-#define BUILT_DATE  "17 Feb 2024"
+#define VERSION "0.2.4"
+#define BUILT_DATE  "18 Feb 2024"
   
 
  
@@ -1001,12 +1001,12 @@ void puts_term_from_ast(Ast *p) {
 
 
   case AST_OPCONS:{
-
     Ast *ast_list = p->right;
 
     Ast *hd = ast_list->left;
 
     if (((hd->id == AST_NAME) && (hd->right == NULL)) // x y ...
+	|| (hd->id == AST_SYM)
 	|| (hd->id == AST_AGENT) // Z S(x) ...
 	|| (hd->id == AST_MKLIST) // [t,s,u,...]
 	|| (hd->id == AST_NIL) // []
